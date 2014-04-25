@@ -397,13 +397,13 @@ cexpr		: cexpr OP_PLUS mcexpr
             ;  
 mcexpr		: mcexpr OP_TIMES cfactor 
                 {
-                    /*TOo */ //aje <start>
+                    /*TOO */ //aje <start>
        		    $$ = makeExprNode(BINARY_OPERATION, BINARY_OP_MUL);
                     makeFamily($$, 2, $1, $3);
                 }
             | mcexpr OP_DIVIDE cfactor 
                 {
-                    /*TOD*/
+                    /*TOO*/
        		    $$ = makeExprNode(BINARY_OPERATION, BINARY_OP_SUB);
                     makeFamily($$, 2, $1, $3);
                 }
