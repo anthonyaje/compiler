@@ -462,12 +462,12 @@ init_id		: ID
 
 stmt_list	: stmt_list stmt 
                 {
-                    /*FIXME*/
+                    /*TOO*/
 		    $$ = makeSibling($1,$2);
                 }
             | stmt
                 {
-                    /*FIXME*/
+                    /*TOO*/
 		    $$ = Allocate(STMT_LIST_NODE);
 		    makeChild($$,makeStmtNode($1));
                 }
@@ -478,21 +478,43 @@ stmt_list	: stmt_list stmt
 stmt		: MK_LBRACE block MK_RBRACE 
                 {
                     /*TOO*/ /**DADA**/
-					$$ = $2;
+         		$$ = $2;
                 }
-            /*TODO: | While Statement */
+            /*TOO: | While Statement */
+	    | while MK_LPAREN relop_expr_list MK_RPAREN stmt
+		{
+		    $$ = makeStmtNode(WHILE_STMT);
+		    makeFamily($$,2,$3,$5);
+		}	
+
             | FOR MK_LPAREN assign_expr_list MK_SEMICOLON relop_expr_list MK_SEMICOLON assign_expr_list MK_RPAREN stmt
                 {
                     /*TOO*/ /**DADA**/
-					$$ = makeStmtNode(FOR_STMT);
-					makeFamily($$,$3,$5,makeChild($7,$9));
+			$$ = makeStmtNode(FOR_STMT);
+			makeFamily($$,3,$3,$5,makeChild($7,$9));
                 }
             | var_ref OP_ASSIGN relop_expr MK_SEMICOLON
                 {
-                    /*TODO*/
+                    /*TOO*/
+		    $$ = makeStmtNode(ASSIGN_STMT);
+		    makeFamily($$,2,$1,$3);
+		
                 }
-            /*TODO: | If Statement */
-            /*TODO: | If then else */
+            /*TOO: | If Statement */
+	    | IF MK_LPAREN relop_expr MK_RPAREN stmt
+		{
+		    $$ = makeStmtNode(IF_STMT);
+                    makeFamily($$,2,$3,$5);
+
+		}            
+	    /*TOO: | If then else */
+	    | IF MK_LPAREN relop_expr MK_RPAREN stmt ELSE stmt
+		{
+		    $$ = makeStmtNode(IF_STMT);
+                    makeFamily($$,2,$3,$5,$7);
+
+		}            
+
             /*TODO: | function call */
             | MK_SEMICOLON 
                 {
@@ -520,11 +542,15 @@ assign_expr_list : nonempty_assign_expr_list
 
 nonempty_assign_expr_list        : nonempty_assign_expr_list MK_COMMA assign_expr 
                                     {
-                                        /*TODO*/
+                                        /*TOO*/
+					$$ = Allocate(NONEMPTY_ASSIGN_EXPR_LIST_NODE);
+					akeSibling($$,$1);
+					makeChild($$,$3);
                                     }
                                  | assign_expr
                                     {
-                                        /*TODO*/
+                                        /*TOO*/
+					$$ = $1;
                                     }
                                  ;
 
@@ -560,17 +586,20 @@ relop_expr	: relop_term
 
 relop_term	: relop_factor 
                 {
-                    /*TODO*/
+                    /*TOO*/
+		    $$ = $1;
                 }
             | relop_term OP_AND relop_factor
                 {
                     /*TODO*/
+		    $$ = 
                 }
             ;
 
 relop_factor	: expr
                     {
-                        /*TODO*/
+                        /*TOO*/
+			$$ = $1;
                     }
                 | expr rel_op expr 
                     {
@@ -580,7 +609,8 @@ relop_factor	: expr
 
 rel_op		: OP_EQ
                 {
-                    /*TODO*/
+                    /*TOO*/
+		    $$ = makeExprNode(BINARY_OPERATION,BINARY_OP_EQ);
                 }
             | OP_GE 
                 {
@@ -617,21 +647,26 @@ relop_expr_list	: nonempty_relop_expr_list
 
 nonempty_relop_expr_list	: nonempty_relop_expr_list MK_COMMA relop_expr
                                 {
-                                    /*TODO*/
+                                    /*TOO*/
+				    AST_NODE* node = Allocate(NONEMPTY_RELOP_EXPR_LIST_NODE);
+				    makeFamily($$,2,node,$3);
                                 }
                             | relop_expr 
                                 {
-                                    /*TODO*/
+                                    /*TOO*/
+				    $$ = $1;
                                 }
                             ;
 
 expr		: expr add_op term 
                 {
                     /*TODO*/
+		    
                 }
             | term 
                 {
-                    /*TODO*/
+                    /*TOO*/
+		    $$ = $1;
                 }
             ;
 
