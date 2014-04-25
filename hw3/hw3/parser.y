@@ -371,7 +371,7 @@ id_list		: ID
 dim_decl	: MK_LB cexpr MK_RB 
                 {
                     /*TODO*/
-		    $$=$1;
+		    $$=$2;
                 } 
             /*TODO: Try if you can define a recursive production rule
             | .......
@@ -477,12 +477,15 @@ stmt_list	: stmt_list stmt
 
 stmt		: MK_LBRACE block MK_RBRACE 
                 {
-                    /*TODO*/
+                    /*TOO*/ /**DADA**/
+					$$ = $2;
                 }
             /*TODO: | While Statement */
             | FOR MK_LPAREN assign_expr_list MK_SEMICOLON relop_expr_list MK_SEMICOLON assign_expr_list MK_RPAREN stmt
                 {
-                    /*TODO*/
+                    /*TOO*/ /**DADA**/
+					$$ = makeStmtNode(FOR_STMT);
+					makeFamily($$,$3,$5,makeChild($7,$9));
                 }
             | var_ref OP_ASSIGN relop_expr MK_SEMICOLON
                 {
