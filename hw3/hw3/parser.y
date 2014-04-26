@@ -609,35 +609,42 @@ relop_factor	: expr
 
 rel_op		: OP_EQ
                 {
-                    /*TOO*/
+                    /*TOO*/ /**DADA**/
 		    $$ = makeExprNode(BINARY_OPERATION,BINARY_OP_EQ);
                 }
             | OP_GE 
                 {
-                    /*TODO*/
+                    /*TOO*/ /**DADA**/
+			$$ = makeExprNode(BINARY_OPERATION,BINARY_OP_GE);
                 }
             | OP_LE 
                 {
-                    /*TODO*/
+                    /*TOO*/ /**DADA**/
+			$$ = makeExprNode(BINARY_OPERATION,BINARY_OP_LE);
                 }
             | OP_NE 
                 {
-                    /*TODO*/
+                    /*TOO*/ /**DADA**/
+			$$ = makeExprNode(BINARY_OPERATION,BINARY_OP_NE);
                 }
             | OP_GT 
                 {
-                    /*TODO*/
+                    /*TOO*/ /**DADA**/
+			$$ = makeExprNode(BINARY_OPERATION,BINARY_OP_GT);
                 }
             | OP_LT 
                 {
-                    /*TODO*/
+                    /*TOO*/ /**DADA**/
+			$$ = makeExprNode(BINARY_OPERATION,BINARY_OP_LT);
                 }
             ;
 
 
 relop_expr_list	: nonempty_relop_expr_list 
                     {
-                        /*TODO*/
+                        /*TOO*/ /**DADA**/ /**revised**/
+						$$ = Allocate(NONEMPTY_RELOP_EXPR_LIST_NODE);
+						makeChild($$,$1);
                     }
                 | 
                     {
@@ -647,9 +654,8 @@ relop_expr_list	: nonempty_relop_expr_list
 
 nonempty_relop_expr_list	: nonempty_relop_expr_list MK_COMMA relop_expr
                                 {
-                                    /*TOO*/
-				    AST_NODE* node = Allocate(NONEMPTY_RELOP_EXPR_LIST_NODE);
-				    makeFamily($$,2,node,$3);
+                                    /*TOO*/ /**DADA**/ /**revised**/
+				    makeSibling($1,$3);
                                 }
                             | relop_expr 
                                 {
@@ -660,7 +666,7 @@ nonempty_relop_expr_list	: nonempty_relop_expr_list MK_COMMA relop_expr
 
 expr		: expr add_op term 
                 {
-                    /*TODO*/
+                    /*TODO*/ 
 		    
                 }
             | term 
