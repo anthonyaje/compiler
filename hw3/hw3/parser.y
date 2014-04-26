@@ -370,7 +370,7 @@ id_list		: ID
 		;
 dim_decl	: MK_LB cexpr MK_RB 
                 {
-                    /*TODO*/
+                    /**FIXME**/
 		    $$=$2;
                 } 
             /*TODO: Try if you can define a recursive production rule
@@ -516,23 +516,29 @@ stmt		: MK_LBRACE block MK_RBRACE
 		}            
 
             /*TODO: | function call */
+			
             | MK_SEMICOLON 
                 {
-                    /*TODO*/
+                    /*TOO*/ /**DADA**/
+					$$ = Allocate(NUL_NODE); 
                 }
             | RETURN MK_SEMICOLON  
                 {
-                    /*TODO*/
+                    /*TOO*/ /**DADA**/
+					$$ = makeStmtNode(RETURN_STMT);
                 }
             | RETURN relop_expr MK_SEMICOLON
                 {
-                    /*TODO*/
+                    /*TOO*/ /**DADA**/
+					$$ = makeStmtNode(RETURN_STMT);
+                    makeChild($$,$2);
                 }
             ;
 
 assign_expr_list : nonempty_assign_expr_list 
                      {
-                        /*TODO*/
+                        /*TOO*/ /**DADA**/
+						$$ = $1;
                      }
                  |  
                      {
@@ -544,7 +550,7 @@ nonempty_assign_expr_list        : nonempty_assign_expr_list MK_COMMA assign_exp
                                     {
                                         /*TOO*/
 					$$ = Allocate(NONEMPTY_ASSIGN_EXPR_LIST_NODE);
-					akeSibling($$,$1);
+					makeSibling($$,$1);
 					makeChild($$,$3);
                                     }
                                  | assign_expr
@@ -591,8 +597,9 @@ relop_term	: relop_factor
                 }
             | relop_term OP_AND relop_factor
                 {
-                    /*TODO*/
-		    $$ = 
+                    /*TOO*/ /**DADA**/
+			$$ = makeExprNode(BINARY_OPERATION, BINARY_OP_AND);
+		    makeFamily($$, 2, $1, $3);
                 }
             ;
 
@@ -603,7 +610,8 @@ relop_factor	: expr
                     }
                 | expr rel_op expr 
                     {
-                        /*TODO*/
+                        /*TOO*/ /**DADA**/
+						makeFamily($2,2,$1,$3);
                     }
                 ;
 
@@ -666,8 +674,8 @@ nonempty_relop_expr_list	: nonempty_relop_expr_list MK_COMMA relop_expr
 
 expr		: expr add_op term 
                 {
-                    /*TODO*/ 
-		    
+                    /*TOO*/ /**DADA**/
+		    makeFamily($2, 2, $1, $3);
                 }
             | term 
                 {
@@ -688,11 +696,13 @@ add_op		: OP_PLUS
 
 term		: term mul_op factor
                 {
-                    /*TODO*/
+                    /*TOO*/ /**DADA**/
+		    makeFamily($2, 2, $1, $3);
                 }
             | factor
                 {
-                    /*TODO*/
+                    /*TOO*/ /**DADA**/
+		    $$ = $1;
                 }
             ;
 
@@ -710,22 +720,44 @@ mul_op		: OP_TIMES
 
 factor		: MK_LPAREN relop_expr MK_RPAREN
                 {
-                    /*TODO*/
+                    /*TOO*/  /**DADA**/
+					$$ = $2;
                 }
-            /*TODO: | -(<relop_expr>) e.g. -(4) */
+            /*TOO: | -(<relop_expr>) e.g. -(4) */ /**DADA**/
+			| OP_MINUS MK_LPAREN relop_expr MK_RPAREN    
+				{   
+                    /*TOO*/ /**DADA**/
+					$$ = makeExprNode(UNARY_OPERATION, UNARY_OP_NEGATIVE);
+					makeChild($$,$3)
+                }
             | OP_NOT MK_LPAREN relop_expr MK_RPAREN
                 {   
-                    /*TODO*/
+                    /*TOO*/ /**DADA**/
+					$$ = makeExprNode(UNARY_OPERATION, UNARY_OP_LOGICAL_NEGATION);
+					makeChild($$,$3)
                 }
             | CONST 
                 {
                     $$ = Allocate(CONST_VALUE_NODE);
                     $$->semantic_value.const1=$1;
                 }
-            /*TODO: | -<constant> e.g. -4 */
+            /*TOO: | -<constant> e.g. -4 */ /**DADA**/
+			| OP_MINUS CONST
+                {
+                    /*TOO*/ /**DADA**/
+					$$ = makeExprNode(UNARY_OPERATION, UNARY_OP_NEGATIVE);
+					AST_NODE* node = Allocate(CONST_VALUE_NODE);
+                    node->semantic_value.const1=$2;
+					makeChild($$,node);
+                }
+			
             | OP_NOT CONST
                 {
-                    /*TODO*/
+                    /*TOO*/ /**DADA**/
+					$$ = makeExprNode(UNARY_OPERATION, UNARY_OP_LOGICAL_NEGATION);
+					AST_NODE* node = Allocate(CONST_VALUE_NODE);
+                    node->semantic_value.const1=$2;
+					makeChild($$,node);
                 }
             | ID MK_LPAREN relop_expr_list MK_RPAREN 
                 {
@@ -738,33 +770,48 @@ factor		: MK_LPAREN relop_expr MK_RPAREN
                 }
             | var_ref 
                 {
-                    /*TODO*/
+                    /*TOO*/ /**DADA**/
+					$$ = $1;
                 }
-            /*TODO: | -<var_ref> e.g. -var */
-            | OP_NOT var_ref 
+            /*TOO: | -<var_ref> e.g. -var */ /**DADA**/
+            | OP_MINUS var_ref 
                 {
-                    /*TODO*/
+                    /*TOO*/ /**DADA**/
+					$$ = makeExprNode(UNARY_OPERATION, UNARY_OP_NEGATIVE);
+					makeChild($$,$2);
+                } 
+			
+			| OP_NOT var_ref 
+                {
+                    /*TOO*/ /**DADA**/
+					$$ = makeExprNode(UNARY_OPERATION, UNARY_OP_LOGICAL_NEGATION);
+					makeChild($$,$2);
                 }
             ;
 
 var_ref		: ID 
                 {
-                    /*TODO*/
+                    /*TOO*/ /**DADA**/
+					$$ = makeIDNode($1, NORMAL_ID);
                 }
             | ID dim_list 
                 {
-                    /*TODO*/
+                    /*TOO*/ /**DADA**/
+					$$ = makeIDNode($1, ARRAY_ID);
+					makeChild($$,$2);
                 }
             ;
 
 
 dim_list	: dim_list MK_LB expr MK_RB 
                 {
-                    /*TODO*/
+                    /*TOO*/ /**DADA**/
+					makeSibling($1,$3);
                 }
             | MK_LB expr MK_RB
                 {
-                    /*TODO*/
+                    /*TOO*/ /**DADA**/
+					$$ = $2;
                 }
 		;
 
