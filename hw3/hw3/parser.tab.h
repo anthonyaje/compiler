@@ -89,7 +89,7 @@ extern int yydebug;
 typedef union YYSTYPE
 {
 /* Line 2077 of yacc.c  */
-#line 111 "parser.y"
+#line 112 "parser.y"
 
 	char *lexeme;
 	CON_Type  *const1;

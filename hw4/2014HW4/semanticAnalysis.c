@@ -7,6 +7,8 @@
 // You only need to check for errors stated in the hw4 document. //
 int g_anyErrorOccur = 0;
 
+DATA_TYPE f_global_return_type;
+
 DATA_TYPE getBiggerType(DATA_TYPE dataType1, DATA_TYPE dataType2);
 void processProgramNode(AST_NODE *programNode);
 void processDeclarationNode(AST_NODE* declarationNode);
@@ -27,12 +29,12 @@ void checkFunctionCall(AST_NODE* functionCallNode);
 void processExprRelatedNode(AST_NODE* exprRelatedNode);
 void checkParameterPassing(Parameter* formalParameter, AST_NODE* actualParameter);
 void checkReturnStmt(AST_NODE* returnNode);
-void processExprNode(AST_NODE* exprNode);
+void processExprNode(AST_NODE* exprNode);  //aje: process the exp
 void processVariableLValue(AST_NODE* idNode);
 void processVariableRValue(AST_NODE* idNode);
 void processConstValueNode(AST_NODE* constValueNode);
-void getExprOrConstValue(AST_NODE* exprOrConstNode, int* iValue, float* fValue);
-void evaluateExprValue(AST_NODE* exprNode);
+void getExprOrConstValue(AST_NODE* exprOrConstNode, int* iValue, float* fValue); //aje: may be use in array
+void evaluateExprValue(AST_NODE* exprNode); //aje: 
 
 
 typedef enum ErrorMsgKind
@@ -131,14 +133,14 @@ void processDeclarationNode(AST_NODE* declarationNode)
   	    declareIdList(declarationNode, VARIABLE_ATTRIBUTE, 1);
             break;
 
-        case TYPE_DECL :
+        cas  TrdYPE_DECL ://TODO
             break;
 
         case FUNCTION_DECL:
 	    declareFunction(declarationNode);
             break;
 
-        case FUNCTION_PARAMETER_DECL:
+        case FUNCTION_PARAMETER_DECL://TODO
 	    
             break;
         default:
@@ -206,11 +208,29 @@ void checkForStmt(AST_NODE* forNode)
 
 void checkAssignmentStmt(AST_NODE* assignmentNode)
 {
+    //AJE
+    AST_NODE* p = assignmentNode->child;
+    char* name = (p->semantic_value.identifierSemanticValue.identifierName);
+    if(declaredLocally(name) 
+	== 0){
+ 	printf("ID %s undeclared",name);
+    }
+    //FIXME check which one to use: evaluateExprValue processExprNode processExprRelatedNode getExprOrConstValue
+    evaluateExprValue(p->rightSibling); 
 }
 
 
 void checkIfStmt(AST_NODE* ifNode)
 {
+    //AJE
+    AST_NODE* p = ifNode->child;
+    evaluateExprValue(p);
+    p = p->rightSibling;
+    while(p!=NULL){
+	processBlockNode(p);
+	p = p->rightSibling;
+    }
+   
 }
 
 void checkWriteFunction(AST_NODE* functionCallNode)
@@ -260,16 +280,55 @@ void processConstValueNode(AST_NODE* constValueNode)
 
 void checkReturnStmt(AST_NODE* returnNode)
 {
+	if(returnNode->child->dataType == f_global_return_type)
+	    printf("incompatible return type.\n");
 }
-
 
 void processBlockNode(AST_NODE* blockNode)
 {
+    
+    AST_NODE* p = blockNode->child;
+    while(p != NULL ){
+       switch(p->child->semantic_value.kind){
+	   case STMT_LIST_NODE:
+		processStmtNode(p->child);
+		break;
+	   case DECLARATION_NODE:
+		processDeclarationNode(p->child);
+		break;
+	   default:
+	        printf("blocknode's child case undefined\n");
+       }
+       p = p->rightSibling;
+    }
 }
 
 
 void processStmtNode(AST_NODE* stmtNode)
 {
+    AST_NODE* p = stmtNode->child;
+    switch(stmtNode->semantic_value.kind){
+        case RETURN_STMT:
+		processStmtNode(p);
+        	break;
+	case FUNCTION_CALL_STMT:
+		checkFunctionCall(p);//TODO
+		break;
+	case WHILE_STMT:
+		checkWhileStmt(p);//TODO
+		break;
+ 	case FOR_STMT:
+		checkForStmt(p);//TODO
+		break;
+ 	case ASSIGN_STMT:
+		checkAssignmentStmt(p); //aje trying
+		break;
+ 	case IF_STMT:		//aje
+		checkIfStmt(p);
+		break;
+        default:
+		printf("unhandled stmnt kind\n");
+    }
 }
 
 
@@ -289,7 +348,7 @@ void declareFunction(AST_NODE* declarationNode)
     functionSig = (FunctionSignature*) malloc(sizeof(FunctionSignature));
     functionSig->parameterList = NULL;
     functionSig->parametersCount = 0;
-    functionSig->returnType = p->DATA_TYPE;
+    f_global_return_type = functionSig->returnType = p->DATA_TYPE;
     
     p = p->rightSibling;
     char* function_name = p->semantic_value.identifierSemanticValue.identifierName;
@@ -297,41 +356,40 @@ void declareFunction(AST_NODE* declarationNode)
     p = p->rightSibling;
     AST_NODE* p_to_block = p;
     
-    //p = p->child==NULL?p:p->child;
-    if(p->child != NULL){
+    if(p->child != NULL){//if the function has at least one parameter
 	p = p->child;
-	while(p!=NULL){
+	Parameter* para_this = NULL: 
+	while(p!=NULL){//while there is an unvisited parameter
            AST_NODE* q = p->child;
 	   functionSig->parametersCount++;
+
+       	   TypeDescriptor* type_desc = (TypeDescriptor*) malloc(sizeof(TypeDescriptor));
+	   type_desc->kind = q->rightSibling->semantic_value.identifierSemanticValue.kind==NORMAL_ID?SCALAR_TYPE_DESCRIPTOR:ARRAY_TYPE_DESCRIPTOR;
+	   if(type_desc->kind==SCALAR_TYPE_DESCRIPTOR){
+ 	      type_desc->properties.dataType  = q->dataType;
+	   }else{
+	   //traverse once to compute the dim
+		  AST_NODE* temp = q->rightSibling->child;
+		  type_desc->properties.arrayProperties.dimension = 0;	//ASSIGN
+		  //type_desc->properties.arrayProperties.sizeInEachDimension; 
+		  type_desc->properties.arrayProperties.elementType = q->dataType; //??
+		  while(temp!=NULL){
+			type_desc->properties.arrayProperties.dimension++;
+			temp = temp->rightSibling;				
+		  }
+	    }
            if(functionSig->parameterList == NULL){
 	       functionSig->parameterList = (Parameter*) malloc(sizeof(Parameter)); 	    
 	       functionSig->parameterList->next=NULL;
-	        	    
-   	       TypeDescriptor* type_desc = (TypeDescriptor*) malloc(sizeof(TypeDescriptor));
-	       type_desc->kind = q->rightSibling->semantic_value.identifierSemanticValue.kind==NORMAL_ID?SCALAR_TYPE_DESCRIPTOR:ARRAY_TYPE_DESCRIPTOR;
-	       if(type_desc->kind==SCALAR_TYPE_DESCRIPTOR){
-		//FIXME assume: dataType in the variable name
- 		  type_desc->properties.dataType  = q->rightSibling->dataType;
-	       }else{
-		//TODO: traverse once to compute the dim
-			  AST_NODE* temp =
-			  type_desc->properties.arrayProperties.dimension = 0;	//ASSIGN
-			  type_desc->properties.arrayProperties.sizeInEachDimension; 
-			  type_desc->properties.arrayProperties.elementType; //??
-			  /*DADA*///Assume the size of each dimension is a constant
-			  //ELSE IF it's an expression THEN we're going to have a very hard time
-			  while(temp!=NULL){
-			    int index = type_desc->properties.arrayProperties.dimension;
-				type_desc->properties.arrayProperties.dimension++;				
-				type_desc->properties.arrayProperties.sizeInEachDimension[index] = temp->semantic_value.const1->const_u.intval;
-			  }
-	       }
-	       functionSig->parameterList->type=type_desc;
-	       functionSig->parameterList->parameterName = q->semantic_value.identifierSemanticValue.identifierName;	    
- 	   }
-	   //TODO:IMPORTANT!: if parameterList != NULL
-	   //cannot put it on the leftmost
-
+	       para_this = functionSig->parameterList; 
+ 	   }else{
+	        para_this->next= (Parameter*) malloc(sizeof(Parameter)); 	    
+		para_this->next->next = NULL;
+		para_this = para_this->next;
+	   }
+	    functionSig->parameterList->type=type_desc;
+	    functionSig->parameterList->parameterName = q->semantic_value.identifierSemanticValue.identifierName;	    
+	    
 	    p = p->rightSibling;
         }
     }
@@ -340,6 +398,9 @@ void declareFunction(AST_NODE* declarationNode)
     symbol_att->attributeKind = FUNCTION_SIGNATURE;
     symbol_att->attr = functionSig;
     enterSymbol(function_name,symbol_att);
+
+    processBlockNode(p_to_block->rightSibling);
+    
 }
 
 
