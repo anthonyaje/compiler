@@ -314,9 +314,17 @@ void declareFunction(AST_NODE* declarationNode)
  		  type_desc->properties.dataType  = q->rightSibling->dataType;
 	       }else{
 		//TODO: traverse once to compute the dim
-		  type_desc->properties.arrayProperties.dimension;	//ASSIGN
-		  type_desc->properties.arrayProperties.sizeInEachDimension; 
-		  type_desc->properties.arrayProperties.elementType;
+			  AST_NODE* temp =
+			  type_desc->properties.arrayProperties.dimension = 0;	//ASSIGN
+			  type_desc->properties.arrayProperties.sizeInEachDimension; 
+			  type_desc->properties.arrayProperties.elementType; //??
+			  /*DADA*///Assume the size of each dimension is a constant
+			  //ELSE IF it's an expression THEN we're going to have a very hard time
+			  while(temp!=NULL){
+			    int index = type_desc->properties.arrayProperties.dimension;
+				type_desc->properties.arrayProperties.dimension++;				
+				type_desc->properties.arrayProperties.sizeInEachDimension[index] = temp->semantic_value.const1->const_u.intval;
+			  }
 	       }
 	       functionSig->parameterList->type=type_desc;
 	       functionSig->parameterList->parameterName = q->semantic_value.identifierSemanticValue.identifierName;	    
