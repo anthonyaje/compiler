@@ -26,7 +26,7 @@ void checkAssignmentStmt(AST_NODE* assignmentNode);
 void checkIfStmt(AST_NODE* ifNode);
 void checkWriteFunction(AST_NODE* functionCallNode);
 void checkFunctionCall(AST_NODE* functionCallNode);
-void processExprRelatedNode(AST_NODE* exprRelatedNode);
+void processExprRelatedNode(AST_NODE* exprRelatedNode);  //Related?? or relative operator
 void checkParameterPassing(Parameter* formalParameter, AST_NODE* actualParameter);
 void checkReturnStmt(AST_NODE* returnNode);
 void processExprNode(AST_NODE* exprNode);  //aje: process the exp
@@ -136,17 +136,15 @@ void processDeclarationNode(AST_NODE* declarationNode)
         case VARIABLE_DECL :
   	    declareIdList(declarationNode, VARIABLE_ATTRIBUTE, 1);
             break;
-
         case  TYPE_DECL ://aje
 	    processTypeNode(declarationNode);
             break;
-
         case FUNCTION_DECL:
 	    declareFunction(declarationNode);
             break;
-
-        case FUNCTION_PARAMETER_DECL://TODO
-	    
+        case FUNCTION_PARAMETER_DECL:
+	   //Done in the function declaration
+	   prinf("declarationNode Err: FUNCTION_PARA_DECL. Should be done in the function decl")
             break;
         default:
    	    printf("uncaught case\n"); 
@@ -224,11 +222,15 @@ void checkWhileStmt(AST_NODE* whileNode)
 
 void checkForStmt(AST_NODE* forNode)
 {
+<<<<<<< HEAD
 	//DADA
     AST_NODE* p = forNode->child;
     evaluateExprValue(p);
     p = p->rightSibling;
     processBlockNode(p); 
+=======
+    
+>>>>>>> ce8d3e9a348a56bf04e0d830cca2710187563bea
 }
 
 
@@ -379,6 +381,15 @@ void processStmtNode(AST_NODE* stmtNode)
 
 void processGeneralNode(AST_NODE *node)
 {
+    switch(node->semantic_value.kind){
+        case NONEMPTY_ASSIGN_EXPR_LIST_NODE:
+	    //TODO:check the assignment
+            break;
+        case NONEMPTY_RELOP_EXPR_LIST_NODE:
+	    //TODO: check the expression
+
+	    break;
+    }
 }
 
 void processDeclDimList(AST_NODE* idNode, TypeDescriptor* typeDescriptor, int ignoreFirstDimSize)
