@@ -307,25 +307,34 @@ void checkParameterPassing(Parameter* formalParameter, AST_NODE* actualParameter
     } else {
 `	// may have too many or too few arguments
 	AST_NODE* p = actualParameter->child;
-	while(p != NULL){
+	Parameter* q = formalParameter;
+	while((p!=NULL) && (q!=NULL)){
 	    TypeDescriptor temp_type;
 	    if(p->nodeType == EXPR_NODE){ 
 		//ASSUME: expr return a SCALAR_TYPE
 		//evaluateExprValue(p->nodeType, &temp_type);
-	        if(formalParameter->type->kind != SCALAR_TYPE_DESCRIPTOR){
+	        if(q->type->kind != SCALAR_TYPE_DESCRIPTOR){
 		    printf("Scalar <EXPRESSION> passed to array\n");
 		}
 	    }
-	    else if((formalParameter->type->kind == SCALAR_TYPE_DESCRIPTOR)&& 
+	    else if((q->type->kind == SCALAR_TYPE_DESCRIPTOR)&& 
 		&& (p->semantic_value.identifierSemanticValue.kind == ARRAY_ID)){
 		    printf("Array %s passed to scalar\n",p->semantic_value->identifierSemanticValue.identifierName);
 	    }   
-	    else if((formalParameter->type->kind == ARRAY_TYPE_DESCRIPTOR)&& 
+	    else if((q->type->kind == ARRAY_TYPE_DESCRIPTOR)&& 
 		&& (p->semantic_value.identifierSemanticValue.kind != ARRAY_ID)){
 		    printf("Scalar %s passed to array\n",p->semantic_value->identifierSemanticValue.identifierName);
 	    }
+	    	    
+	    p = p->rightSibling;
+	    q = q->next;
 	}
-
+        if((q == NULL) && (p != NULL)){
+	    printf("too many arguments\n");
+        }
+	else if((q != NULL) && (p == NULL)){
+	    printf("too few arguments\n");
+        }
     }
     	
 }
