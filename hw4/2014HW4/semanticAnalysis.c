@@ -34,7 +34,7 @@ void processVariableLValue(AST_NODE* idNode);
 void processVariableRValue(AST_NODE* idNode);
 void processConstValueNode(AST_NODE* constValueNode);
 void getExprOrConstValue(AST_NODE* exprOrConstNode, int* iValue, float* fValue); //aje: may be use in array
-void evaluateExprValue(AST_NODE* exprNode); //aje: 
+void evaluateExprValue(AST_NODE* exprNode,TypeDescriptor* outType); //aje: 
 
 
 typedef enum ErrorMsgKind
@@ -119,7 +119,7 @@ void processProgramNode(AST_NODE *programNode)
 	  processDeclarationNode(child);
           break;
       case VARIABLE_DECL_LIST_NODE:		//VARIABLE_DECL_LIST_NODE->child == VARIABLE_DECL
-	  processDeclarationNode(childi->child);
+	  processDeclarationNode(child->child);
           break;
       default:
    	  printf("uncaught case\n"); 
@@ -207,14 +207,24 @@ void declareIdList(AST_NODE* declarationNode, SymbolAttributeKind isVariableOrTy
 
 void checkAssignOrExpr(AST_NODE* assignOrExprRelatedNode)
 {
-	
+  AST_NODE* p = assignOrExprRelatedNode->child;
+  while(p!=NULL){
+    if(p->nodeType==STMT_NODE){
+      	checkAssignmentStmt(p);
+    } 
+    else if(p->nodeType==EXPR_NODE){
+	processExprRelatedNode(p);
+    }
+    p = p->rightSibling;
+  }
 }
 
 void checkWhileStmt(AST_NODE* whileNode)
 {
     //DADA
     AST_NODE* p = whileNode->child;
-    evaluateExprValue(p);
+    //evaluateExprValue(p);
+    checkAssignOrExpr(p);
     p = p->rightSibling;
     processBlockNode(p); 
 }
@@ -222,15 +232,16 @@ void checkWhileStmt(AST_NODE* whileNode)
 
 void checkForStmt(AST_NODE* forNode)
 {
-<<<<<<< HEAD
-	//DADA
+    //DADA
     AST_NODE* p = forNode->child;
-    evaluateExprValue(p);
+    processGeneralNode(p);
+    p = p->rightSibling;
+    processGeneralNode(p);
+    p = p->rightSibling;
+    processGeneralNode(p);
+
     p = p->rightSibling;
     processBlockNode(p); 
-=======
-    
->>>>>>> ce8d3e9a348a56bf04e0d830cca2710187563bea
 }
 
 
@@ -244,7 +255,8 @@ void checkAssignmentStmt(AST_NODE* assignmentNode)
  	printf("ID %s undeclared",name);
     }
     //FIXME check which one to use: evaluateExprValue processExprNode processExprRelatedNode getExprOrConstValue
-    evaluateExprValue(p->rightSibling); 
+    //evaluateExprValue(p->rightSibling);
+    processExprRelatedNode(p->rightSibling);
 }
 
 
@@ -252,12 +264,16 @@ void checkIfStmt(AST_NODE* ifNode)
 {
     //AJE
     AST_NODE* p = ifNode->child;
-    evaluateExprValue(p);
+    evaluateExprRelatedValue(p);
     p = p->rightSibling;
-    while(p!=NULL){
+    processBlockNode(p);
+    p = p->rightSibling;
+    if(p!=NULL){
 	//FIXME check if it is ELSEIF ELSE: block->stmt_if block->block 
+	if(p->nodeType == STMT_NODE)
+        checkIfStmt(p);
+	else
 	processBlockNode(p);
-	p = p->rightSibling;
     }
    
 }
@@ -270,20 +286,48 @@ void checkFunctionCall(AST_NODE* functionCallNode)
 {
 	//DADA
     AST_NODE* p = functionCallNode -> child;
-    char name[] = p->semantic_value->identifierSemanticValue->identifierName;
+    char* name = p->semantic_value->identifierSemanticValue->identifierName;
     if(strcmp(name,"write") != 0){
 		if(declaredLocally(name) == 0){
 		    printf("ID %s undeclared",name);
-	    }else{
-		    checkParameterPassing(retrieveSymbol(name)->attribute->attr.functionSignature->parameterList, p->child);
-	    }
     }
+    checkParameterPassing(retrieveSymbol(name)->attribute->attr.functionSignature->parameterList, p->rightSibling);
+    
+
 }
 
 void checkParameterPassing(Parameter* formalParameter, AST_NODE* actualParameter)
 {
-	//DADA
-	
+    if((formalParameter == NULL) && (actualParameter->nodeType == NUL_NODE)){
+ 	//ok fine
+    } else if((formalParameter != NULL) && (actualParameter->nodeType == NUL_NODE)){
+	printf("too few arguments\n");
+    } else if((formalParameter == NULL) && (actualParameter->nodeType != NUL_NODE)){
+	printf("too many arguments\n");
+    } else {
+`	// may have too many or too few arguments
+	AST_NODE* p = actualParameter->child;
+	while(p != NULL){
+	    TypeDescriptor temp_type;
+	    if(p->nodeType == EXPR_NODE){ 
+		//ASSUME: expr return a SCALAR_TYPE
+		//evaluateExprValue(p->nodeType, &temp_type);
+	        if(formalParameter->type->kind != SCALAR_TYPE_DESCRIPTOR){
+		    printf("Scalar <EXPRESSION> passed to array\n");
+		}
+	    }
+	    else if((formalParameter->type->kind == SCALAR_TYPE_DESCRIPTOR)&& 
+		&& (p->semantic_value.identifierSemanticValue.kind == ARRAY_ID)){
+		    printf("Array %s passed to scalar\n",p->semantic_value->identifierSemanticValue.identifierName);
+	    }   
+	    else if((formalParameter->type->kind == ARRAY_TYPE_DESCRIPTOR)&& 
+		&& (p->semantic_value.identifierSemanticValue.kind != ARRAY_ID)){
+		    printf("Scalar %s passed to array\n",p->semantic_value->identifierSemanticValue.identifierName);
+	    }
+	}
+
+    }
+    	
 }
 
 
@@ -295,8 +339,10 @@ void getExprOrConstValue(AST_NODE* exprOrConstNode, int* iValue, float* fValue)
 {
 }
 
-void evaluateExprValue(AST_NODE* exprNode)
+void evaluateExprValue(AST_NODE* exprNode, TypeDescriptor* outType)
 {
+	AST_NODE* p=exprNode->child;
+	
 }
 
 
@@ -330,7 +376,7 @@ void processBlockNode(AST_NODE* blockNode)
     
     AST_NODE* p = blockNode->child;
     while(p != NULL ){
-       switch(p->child->semantic_value.kind){
+       switch(p->child.nodeType){
 	   case STMT_LIST_NODE:
 		processStmtNode(p->child);
 		break;
@@ -383,11 +429,12 @@ void processGeneralNode(AST_NODE *node)
 {
     switch(node->semantic_value.kind){
         case NONEMPTY_ASSIGN_EXPR_LIST_NODE:
-	    //TODO:check the assignment
+	    //check the assignment
+            checkAssignOrExpr(node);
             break;
         case NONEMPTY_RELOP_EXPR_LIST_NODE:
-	    //TODO: check the expression
-
+	    //check the expression
+            processExprRelatedNode(node);
 	    break;
     }
 }
