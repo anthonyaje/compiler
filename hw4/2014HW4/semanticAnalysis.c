@@ -249,9 +249,10 @@ void checkAssignmentStmt(AST_NODE* assignmentNode)
 {
     //AJE
     AST_NODE* p = assignmentNode->child;
+    //BONUS
+    //processVariableLValue(p)
     char* name = (p->semantic_value.identifierSemanticValue.identifierName);
-    if(declaredLocally(name) 
-	== 0){
+    if(declaredLocally(name) == 0){
  	printf("ID %s undeclared",name);
     }
     //FIXME check which one to use: evaluateExprValue processExprNode processExprRelatedNode getExprOrConstValue
@@ -288,10 +289,16 @@ void checkFunctionCall(AST_NODE* functionCallNode)
     AST_NODE* p = functionCallNode -> child;
     char* name = p->semantic_value->identifierSemanticValue->identifierName;
     if(strcmp(name,"write") != 0){
-		if(declaredLocally(name) == 0){
-		    printf("ID %s undeclared",name);
+	if(declaredLocally(name) == 0){
+	    printf("ID %s undeclared",name);
+            checkParameterPassing(retrieveSymbol(name)->attribute->attr.functionSignature->parameterList, p->rightSibling);
+        }
+    } 
+    else if(strcmp(name,"write") == 0){
+    	if( p->rightSibling->child->semantic_value.const1->const_type != CONST_STRING_TYPE){
+	    printf("parameter to write function is not CONST_STRING_TYPE\n");
+	}     
     }
-    checkParameterPassing(retrieveSymbol(name)->attribute->attr.functionSignature->parameterList, p->rightSibling);
     
 
 }
@@ -357,7 +364,7 @@ void processExprRelatedNode(AST_NODE* exprRelatedNode)
 }
 
 void getExprOrConstValue(AST_NODE* exprOrConstNode, int* iValue, float* fValue)
-{
+{//traverse the expression node to the children and siblings
      AST_NODE* p = exprOrConstNode->child;
      int final_int_type = 1;
      while(p != NULL){
@@ -427,17 +434,26 @@ void processExprNode(AST_NODE* exprNode)
 
 
 void processVariableLValue(AST_NODE* idNode)
-{
+{ 
+    //BONUS
+    if(idNode->nodeType != CONST_VALUE_NODE){
+	printf("Lvalue shall be a variable\n");
+    }else{
+        char* name = (idNode->semantic_value.identifierSemanticValue.identifierName);
+        if(declaredLocally(name) == 0){
+ 	    printf("ID %s undeclared",name);
+        }
+    }
 }
 
 void processVariableRValue(AST_NODE* idNode)
-{
+{ //DONE in the getExprOrConstValue for array_index
 }
 
 
 void processConstValueNode(AST_NODE* constValueNode)
 {
-
+  //seem useless
 }
 
 
@@ -479,16 +495,16 @@ void processStmtNode(AST_NODE* stmtNode)
 		processStmtNode(p);
         	break;
 	case FUNCTION_CALL_STMT:
-		checkFunctionCall(p);//TODO
+		checkFunctionCall(p);
 		break;
 	case WHILE_STMT:
-		checkWhileStmt(p);//TODO
+		checkWhileStmt(p);
 		break;
  	case FOR_STMT:
-		checkForStmt(p);//TODO
+		checkForStmt(p);
 		break;
  	case ASSIGN_STMT:
-		checkAssignmentStmt(p); //aje trying
+		checkAssignmentStmt(p); 
 		break;
  	case IF_STMT:		//aje
 		checkIfStmt(p);
@@ -517,6 +533,7 @@ void processGeneralNode(AST_NODE *node)
 
 void processDeclDimList(AST_NODE* idNode, TypeDescriptor* typeDescriptor, int ignoreFirstDimSize)
 {
+  //seems like integrated withe the declareFunction  
 }
 
 
@@ -579,7 +596,6 @@ void declareFunction(AST_NODE* declarationNode)
     enterSymbol(function_name,symbol_att);
 
     processBlockNode(p_to_block->rightSibling);
-    
 }
 
 
