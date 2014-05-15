@@ -114,17 +114,21 @@ DATA_TYPE getBiggerType(DATA_TYPE dataType1, DATA_TYPE dataType2)
 void processProgramNode(AST_NODE *programNode)
 {
   AST_NODE* child = programNode->child;
-  switch(child){
-      case DECLARATION_NODE:
+  switch(child->declarationNode->semantic_value.declSemanticValue.kind){
+      case DECLARATION_NODE:			//FUNCTION_DECL
 	  processDeclarationNode(child);
+          break;
+      case VARIABLE_DECL_LIST_NODE:		//VARIABLE_DECL_LIST_NODE->child == VARIABLE_DECL
+	  processDeclarationNode(childi->child);
           break;
       default:
    	  printf("uncaught case\n"); 
   }
 }
 
+
 void processDeclarationNode(AST_NODE* declarationNode)
-{
+{//recursive call to traverse the sibling
   if(declarationNode == NULL){ return; }
   else{
      AST_NODE* child = declarationNode->child;
@@ -133,7 +137,8 @@ void processDeclarationNode(AST_NODE* declarationNode)
   	    declareIdList(declarationNode, VARIABLE_ATTRIBUTE, 1);
             break;
 
-        cas  TrdYPE_DECL ://TODO
+        case  TYPE_DECL ://aje
+	    processTypeNode(declarationNode);
             break;
 
         case FUNCTION_DECL:
@@ -146,16 +151,27 @@ void processDeclarationNode(AST_NODE* declarationNode)
         default:
    	    printf("uncaught case\n"); 
    }
-   processDeclarationNode(declarationNode->rightSibling);
+   processDeclarationNode(child->rightSibling);
  }
-
-
 
 }
 
 
 void processTypeNode(AST_NODE* idNodeAsType)
-{
+{//aje :dont need to traverse since the caller gonna do it
+    AST_NODE* p = idNodeAsType->child;
+    SymbolAttribute* symbol_att = (SymbolAttribute*) malloc(sizeof(SymbolAttribute));
+    symbol_att->attributeKind = TYPE_ATTRIBUTE;
+    TypeDescriptor* type_desc = (TypeDescriptor*) malloc(sizeof(TypeDescriptor));
+    type_desc->kind = SCALAR_TYPE_DESCRIPTOR;//FIXME
+    type_desc->properties = p->dataType;
+    symbol_att->attr = type_desc;
+
+    p=p->rightSibling;
+    while(p!=NULL){
+	enterSymbol(p->semantic_value.identifierSemanticValue.identifierName,symbol_att);
+	p=p->rightSibling;
+    }
 }
 
 void declareIdList(AST_NODE* declarationNode, SymbolAttributeKind isVariableOrTypeAttribute, int ignoreArrayFirstDimSize)
@@ -198,6 +214,11 @@ void checkAssignOrExpr(AST_NODE* assignOrExprRelatedNode)
 
 void checkWhileStmt(AST_NODE* whileNode)
 {
+    //DADA
+    AST_NODE* p = whileNode->child;
+    evaluateExprValue(p);
+    p = p->rightSibling;
+    processBlockNode(p); 
 }
 
 
@@ -227,6 +248,7 @@ void checkIfStmt(AST_NODE* ifNode)
     evaluateExprValue(p);
     p = p->rightSibling;
     while(p!=NULL){
+	//FIXME check if it is ELSEIF ELSE: block->stmt_if block->block 
 	processBlockNode(p);
 	p = p->rightSibling;
     }
@@ -293,7 +315,10 @@ void processBlockNode(AST_NODE* blockNode)
 	   case STMT_LIST_NODE:
 		processStmtNode(p->child);
 		break;
-	   case DECLARATION_NODE:
+	// case DECLARATION_NODE:
+	//	processDeclarationNode(p->child);
+	//	break;
+	   case VARIABLE_DECL_LIST_NODE:
 		processDeclarationNode(p->child);
 		break;
 	   default:
@@ -306,7 +331,8 @@ void processBlockNode(AST_NODE* blockNode)
 
 void processStmtNode(AST_NODE* stmtNode)
 {
-    AST_NODE* p = stmtNode->child;
+  AST_NODE* p = stmtNode->child;
+  while(p!=NULL){ 
     switch(stmtNode->semantic_value.kind){
         case RETURN_STMT:
 		processStmtNode(p);
@@ -329,6 +355,8 @@ void processStmtNode(AST_NODE* stmtNode)
         default:
 		printf("unhandled stmnt kind\n");
     }
+    p = p->rightSibling;
+  }
 }
 
 
@@ -402,5 +430,6 @@ void declareFunction(AST_NODE* declarationNode)
     processBlockNode(p_to_block->rightSibling);
     
 }
+
 
 
