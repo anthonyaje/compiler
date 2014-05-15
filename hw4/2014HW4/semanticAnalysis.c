@@ -342,21 +342,87 @@ void checkParameterPassing(Parameter* formalParameter, AST_NODE* actualParameter
 
 void processExprRelatedNode(AST_NODE* exprRelatedNode)
 {
+    AST_NODE* p = exprRelatedNode->child;
+    while(p!=NULL){
+	if(p->nodeType == IDENTIFIER_NODE)
+	    if(declaredLocally(p->semantic_value.identifierSemanticValue.identifierName)==0){
+		printf("ID %s undeclared",p->semantic_value.identifierSemanticValue.identifierName);
+	    }
+        else if(p->nodeType == EXPR_NODE){
+	    processExprNode(p);
+        }
+
+        p = p->rightSibling;
+    }
 }
 
 void getExprOrConstValue(AST_NODE* exprOrConstNode, int* iValue, float* fValue)
 {
+     AST_NODE* p = exprOrConstNode->child;
+     int final_int_type = 1;
+     while(p != NULL){
+        if(p->nodeType == CONST_VALUE_NODE){
+	    if(p->semantic_value.const1->const_type != INTEGERC){
+	        printf("Array index must be an integer\n");
+	    }
+        } 
+        else if(p->nodeType == EXPR_NODE){
+            //dig 
+	   // evaluateExprValue(p, NULL);
+	   AST_NODE* q = p;
+           while(q != NULL){
+              //if(q->child->nodeType == EXPR_NODE){
+                  getExprOrConstValue(q->child,NULL,NULL);
+              //}else if(){
+           
+             // }
+              q = q->rightSibling;
+           }
+
+
+	}else if(p->nodeType == IDENTIFIER_NODE){
+	    if(declaredLocally(p->semantic_value.identifierSemanticValue.identifierName)==0){
+		printf("ID %s undeclared",p->semantic_value.identifierSemanticValue.identifierName);	
+            }else if(p->dataType != INT_TYPE){
+		printf("拍謝.. only integer\n");
+            }
+        }
+
+	p = p->rightSibling;
+     }
 }
 
 void evaluateExprValue(AST_NODE* exprNode, TypeDescriptor* outType)
 {
-	AST_NODE* p=exprNode->child;
+	//unused by our assumption 
+	AST_NODE* p = exprNode;
+	while(p != NULL){
+	  if(p->child->nodeType == EXPR_NODE){
+		getExprOrConstValue(p->child);
+           }else if(){
+	   	
+	   } 
+ 	   p->rightSibling;
+	}
 	
 }
 
 
 void processExprNode(AST_NODE* exprNode)
 {
+    AST_NODE* p = exprNode->child;
+    while(p!=NULL){
+        if(p->nodeType == IDENTIFIER_NODE)
+            if(declaredLocally(p->semantic_value.identifierSemanticValue.identifierName)==0){
+                printf("ID %s undeclared",p->semantic_value.identifierSemanticValue.identifierName);
+            }
+        else if(p->nodeType == EXPR_NODE){
+            processExprNode(p);
+        }
+
+        p = p->rightSibling;
+    }
+
 }
 
 
@@ -371,6 +437,7 @@ void processVariableRValue(AST_NODE* idNode)
 
 void processConstValueNode(AST_NODE* constValueNode)
 {
+
 }
 
 
@@ -397,7 +464,7 @@ void processBlockNode(AST_NODE* blockNode)
 		break;
 	   default:
 	        printf("blocknode's child case undefined\n");
-       }
+      }
        p = p->rightSibling;
     }
 }
@@ -439,11 +506,11 @@ void processGeneralNode(AST_NODE *node)
     switch(node->semantic_value.kind){
         case NONEMPTY_ASSIGN_EXPR_LIST_NODE:
 	    //check the assignment
-            checkAssignOrExpr(node);
+            checkAssignOrExpr(node->child);
             break;
         case NONEMPTY_RELOP_EXPR_LIST_NODE:
 	    //check the expression
-            processExprRelatedNode(node);
+            processExprRelatedNode(node->child);
 	    break;
     }
 }

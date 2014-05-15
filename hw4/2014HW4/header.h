@@ -37,13 +37,14 @@ typedef enum BINARY_OPERATOR
     BINARY_OP_AND,
     BINARY_OP_OR
 } BINARY_OPERATOR;
-
+ANDOM, IMMEDIATE, SEARCH} strategy;
+strategy my_strategy = IMMEDIATE;
 typedef enum UNARY_OPERATOR
 {
     UNARY_OP_POSITIVE,
     UNARY_OP_NEGATIVE,
     UNARY_OP_LOGICAL_NEGATION
-} UNARY_OPERATOR;
+} UNAuRY_OPERATOR;
 
 //C_type= type of constant ex: 1, 3.3, "const string"
 //do not modify, or lexer might break
