@@ -224,6 +224,11 @@ void checkWhileStmt(AST_NODE* whileNode)
 
 void checkForStmt(AST_NODE* forNode)
 {
+	//DADA
+    AST_NODE* p = forNode->child;
+    evaluateExprValue(p);
+    p = p->rightSibling;
+    processBlockNode(p); 
 }
 
 
@@ -261,10 +266,22 @@ void checkWriteFunction(AST_NODE* functionCallNode)
 
 void checkFunctionCall(AST_NODE* functionCallNode)
 {
+	//DADA
+    AST_NODE* p = functionCallNode -> child;
+    char name[] = p->semantic_value->identifierSemanticValue->identifierName;
+    if(strcmp(name,"write") != 0){
+		if(declaredLocally(name) == 0){
+		    printf("ID %s undeclared",name);
+	    }else{
+		    checkParameterPassing(retrieveSymbol(name)->attribute->attr.functionSignature->parameterList, p->child);
+	    }
+    }
 }
 
 void checkParameterPassing(Parameter* formalParameter, AST_NODE* actualParameter)
 {
+	//DADA
+	
 }
 
 
