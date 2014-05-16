@@ -68,11 +68,16 @@ TOO_FEW_ARGUMENTS,
 
 void printErrorMsgSpecial(AST_NODE* node1, char* name2, ErrorMsgKind errorMsgKind)
 {
-    g_anyErrorOccur = 1;
+    /*g_anyErrorOccur = 1;
     printf("Error found in line %d\n", node1->linenumber);
-    /*
+    
     switch(errorMsgKind)
     {
+    case TOO_FEW_ARGUMENTS:
+	break;
+    case TOO_MANY_ARGUMENTS:
+	break;
+    
     default:
         printf("Unhandled case in void printErrorMsg(AST_NODE* node, ERROR_MSG_KIND* errorMsgKind)\n");
         break;
@@ -85,13 +90,13 @@ void printErrorMsg(AST_NODE* node, ErrorMsgKind errorMsgKind)
 {
     g_anyErrorOccur = 1;
     printf("Error found in line %d\n", node->linenumber);
-    /*
+    
     switch(errorMsgKind)
     {
         printf("Unhandled case in void printErrorMsg(AST_NODE* node, ERROR_MSG_KIND* errorMsgKind)\n");
         break;
     }
-    */
+    
 }
 
 
@@ -114,7 +119,7 @@ DATA_TYPE getBiggerType(DATA_TYPE dataType1, DATA_TYPE dataType2)
 void processProgramNode(AST_NODE *programNode)
 {
   AST_NODE* child = programNode->child;
-  switch(child->declarationNode->semantic_value.declSemanticValue.kind){
+  switch(child->nodeType){
       case DECLARATION_NODE:			//FUNCTION_DECL
 	  processDeclarationNode(child);
           break;
@@ -122,7 +127,8 @@ void processProgramNode(AST_NODE *programNode)
 	  processDeclarationNode(child->child);
           break;
       default:
-   	  printf("uncaught case\n"); 
+   	  printf("uncaught case1\n");
+          printf("Error found in line %d\n", child->linenumber);
   }
 }
 
@@ -131,7 +137,6 @@ void processDeclarationNode(AST_NODE* declarationNode)
 {//recursive call to traverse the sibling
   if(declarationNode == NULL){ return; }
   else{
-     AST_NODE* child = declarationNode->child;
      switch(declarationNode->semantic_value.declSemanticValue.kind){
         case VARIABLE_DECL :
   	    declareIdList(declarationNode, VARIABLE_ATTRIBUTE, 1);
@@ -140,16 +145,18 @@ void processDeclarationNode(AST_NODE* declarationNode)
 	    processTypeNode(declarationNode);
             break;
         case FUNCTION_DECL:
+            printf("in processDeclNode-FUNCTION_DECL\n");
 	    declareFunction(declarationNode);
             break;
         case FUNCTION_PARAMETER_DECL:
 	   //Done in the function declaration
-	   prinf("declarationNode Err: FUNCTION_PARA_DECL. Should be done in the function decl")
-            break;
+	   printf("declarationNode Err: FUNCTION_PARA_DECL. Should be done in the function decl");   
+	    break;
         default:
-   	    printf("uncaught case\n"); 
+   	    printf("uncaught case2\n"); 
+	    printf("Error found in line %d\n", declarationNode->linenumber);
    }
-   processDeclarationNode(child->rightSibling);
+   processDeclarationNode(declarationNode->rightSibling);
  }
 
 }
@@ -162,8 +169,8 @@ void processTypeNode(AST_NODE* idNodeAsType)
     symbol_att->attributeKind = TYPE_ATTRIBUTE;
     TypeDescriptor* type_desc = (TypeDescriptor*) malloc(sizeof(TypeDescriptor));
     type_desc->kind = SCALAR_TYPE_DESCRIPTOR;//FIXME
-    type_desc->properties = p->dataType;
-    symbol_att->attr = type_desc;
+    type_desc->properties.dataType = p->dataType;
+    symbol_att->attr.typeDescriptor = type_desc;
 
     p=p->rightSibling;
     while(p!=NULL){
@@ -182,22 +189,34 @@ void declareIdList(AST_NODE* declarationNode, SymbolAttributeKind isVariableOrTy
 	    symbol_att->attributeKind = isVariableOrTypeAttribute;
    	    TypeDescriptor* type_desc = (TypeDescriptor*) malloc(sizeof(TypeDescriptor));
 	    type_desc->kind = SCALAR_TYPE_DESCRIPTOR;
-	    type_desc->properties = p->dataType;
-	    symbol_att->attr = type_desc;
+	    type_desc->properties.dataType = p->dataType;
+	    if(p->semantic_value.identifierSemanticValue.kind == ARRAY_ID){
+	    //if array type then calculate dimension
+	    	p = p-> child;
+		int dim = 0;
+		while(p != NULL){
+			dim++;
+			p = p->rightSibling; 
+		}
+		type_desc->kind = ARRAY_TYPE_DESCRIPTOR;
+		type_desc->properties.arrayProperties.dimension = dim;
+	    }
+	    symbol_att->attr.typeDescriptor = type_desc;
   	    enterSymbol(p->semantic_value.identifierSemanticValue.identifierName,symbol_att);
 	    p = p->rightSibling;
 	}
   } else{
 	//FIXME ignore
   	AST_NODE* p = child;
+        DATA_TYPE t = p->dataType;
+ 	p = p->rightSibling;
   	while(p!=NULL){
 	    SymbolAttribute* symbol_att = (SymbolAttribute*) malloc(sizeof(SymbolAttribute));
 	    symbol_att->attributeKind = isVariableOrTypeAttribute;
    	    TypeDescriptor* type_desc = (TypeDescriptor*) malloc(sizeof(TypeDescriptor));
 	    type_desc->kind = SCALAR_TYPE_DESCRIPTOR;
-	    type_desc->properties = p->dataType;
-	    symbol_att->attr = type_desc;
-
+	    type_desc->properties.dataType = t;
+	    symbol_att->attr.typeDescriptor = type_desc;
 	    enterSymbol(p->semantic_value.identifierSemanticValue.identifierName,symbol_att);
 	    p = p->rightSibling;
 	}
@@ -248,12 +267,16 @@ void checkForStmt(AST_NODE* forNode)
 void checkAssignmentStmt(AST_NODE* assignmentNode)
 {
     //AJE
+    printf("in checkAssignment\n");
     AST_NODE* p = assignmentNode->child;
     //BONUS
     //processVariableLValue(p)
     char* name = (p->semantic_value.identifierSemanticValue.identifierName);
+    printf("check if $%s is declared\n",name);
     if(declaredLocally(name) == 0){
  	printf("ID %s undeclared",name);
+	printf("Error found in line %d\n", p->linenumber);
+
     }
     //FIXME check which one to use: evaluateExprValue processExprNode processExprRelatedNode getExprOrConstValue
     //evaluateExprValue(p->rightSibling);
@@ -265,7 +288,7 @@ void checkIfStmt(AST_NODE* ifNode)
 {
     //AJE
     AST_NODE* p = ifNode->child;
-    evaluateExprRelatedValue(p);
+    processExprRelatedNode(p);
     p = p->rightSibling;
     processBlockNode(p);
     p = p->rightSibling;
@@ -287,16 +310,18 @@ void checkFunctionCall(AST_NODE* functionCallNode)
 {
 	//DADA
     AST_NODE* p = functionCallNode -> child;
-    char* name = p->semantic_value->identifierSemanticValue->identifierName;
+    char* name = p->semantic_value.identifierSemanticValue.identifierName;
     if(strcmp(name,"write") != 0){
 	if(declaredLocally(name) == 0){
 	    printf("ID %s undeclared",name);
+	    printf("Error found in line %d\n", p->linenumber);
             checkParameterPassing(retrieveSymbol(name)->attribute->attr.functionSignature->parameterList, p->rightSibling);
         }
     } 
     else if(strcmp(name,"write") == 0){
     	if( p->rightSibling->child->semantic_value.const1->const_type != CONST_STRING_TYPE){
 	    printf("parameter to write function is not CONST_STRING_TYPE\n");
+	    printf("Error found in line %d\n", p->rightSibling->child->linenumber);
 	}     
     }
     
@@ -309,10 +334,12 @@ void checkParameterPassing(Parameter* formalParameter, AST_NODE* actualParameter
  	//ok fine
     } else if((formalParameter != NULL) && (actualParameter->nodeType == NUL_NODE)){
 	printf("too few arguments\n");
+	printf("Error found in line %d\n", actualParameter->linenumber);
     } else if((formalParameter == NULL) && (actualParameter->nodeType != NUL_NODE)){
 	printf("too many arguments\n");
+	printf("Error found in line %d\n", actualParameter->linenumber);
     } else {
-`	// may have too many or too few arguments
+	// may have too many or too few arguments
 	AST_NODE* p = actualParameter->child;
 	Parameter* q = formalParameter;
 	while((p!=NULL) && (q!=NULL)){
@@ -322,15 +349,16 @@ void checkParameterPassing(Parameter* formalParameter, AST_NODE* actualParameter
 		//evaluateExprValue(p->nodeType, &temp_type);
 	        if(q->type->kind != SCALAR_TYPE_DESCRIPTOR){
 		    printf("Scalar <EXPRESSION> passed to array\n");
+	    	    printf("Error found in line %d\n", p->linenumber);
 		}
 	    }
-	    else if((q->type->kind == SCALAR_TYPE_DESCRIPTOR)&& 
-		&& (p->semantic_value.identifierSemanticValue.kind == ARRAY_ID)){
-		    printf("Array %s passed to scalar\n",p->semantic_value->identifierSemanticValue.identifierName);
+	    else if((q->type->kind == SCALAR_TYPE_DESCRIPTOR)&&(p->semantic_value.identifierSemanticValue.kind == ARRAY_ID)){
+		    printf("Array %s passed to scalar\n",p->semantic_value.identifierSemanticValue.identifierName);
+	            printf("Error found in line %d\n", p->linenumber);
 	    }   
-	    else if((q->type->kind == ARRAY_TYPE_DESCRIPTOR)&& 
-		&& (p->semantic_value.identifierSemanticValue.kind != ARRAY_ID)){
-		    printf("Scalar %s passed to array\n",p->semantic_value->identifierSemanticValue.identifierName);
+	    else if((q->type->kind == ARRAY_TYPE_DESCRIPTOR)&&(p->semantic_value.identifierSemanticValue.kind != ARRAY_ID)){
+		    printf("Scalar %s passed to array\n",p->semantic_value.identifierSemanticValue.identifierName);
+	            printf("Error found in line %d\n", p->linenumber);
 	    }
 	    	    
 	    p = p->rightSibling;
@@ -338,9 +366,11 @@ void checkParameterPassing(Parameter* formalParameter, AST_NODE* actualParameter
 	}
         if((q == NULL) && (p != NULL)){
 	    printf("too many arguments\n");
+	    printf("Error found in line %d\n", p->linenumber);
         }
 	else if((q != NULL) && (p == NULL)){
 	    printf("too few arguments\n");
+	    printf("Error found in line %d\n", p->linenumber);
         }
     }
     	
@@ -354,6 +384,7 @@ void processExprRelatedNode(AST_NODE* exprRelatedNode)
 	if(p->nodeType == IDENTIFIER_NODE)
 	    if(declaredLocally(p->semantic_value.identifierSemanticValue.identifierName)==0){
 		printf("ID %s undeclared",p->semantic_value.identifierSemanticValue.identifierName);
+	        printf("Error found in line %d\n", p->linenumber);
 	    }
         else if(p->nodeType == EXPR_NODE){
 	    processExprNode(p);
@@ -371,6 +402,7 @@ void getExprOrConstValue(AST_NODE* exprOrConstNode, int* iValue, float* fValue)
         if(p->nodeType == CONST_VALUE_NODE){
 	    if(p->semantic_value.const1->const_type != INTEGERC){
 	        printf("Array index must be an integer\n");
+	        printf("Error found in line %d\n", p->linenumber);
 	    }
         } 
         else if(p->nodeType == EXPR_NODE){
@@ -390,8 +422,10 @@ void getExprOrConstValue(AST_NODE* exprOrConstNode, int* iValue, float* fValue)
 	}else if(p->nodeType == IDENTIFIER_NODE){
 	    if(declaredLocally(p->semantic_value.identifierSemanticValue.identifierName)==0){
 		printf("ID %s undeclared",p->semantic_value.identifierSemanticValue.identifierName);	
+		printf("Error found in line %d\n", p->linenumber);
             }else if(p->dataType != INT_TYPE){
 		printf("拍謝.. only integer\n");
+		printf("Error found in line %d\n", p->linenumber);
             }
         }
 
@@ -402,6 +436,7 @@ void getExprOrConstValue(AST_NODE* exprOrConstNode, int* iValue, float* fValue)
 void evaluateExprValue(AST_NODE* exprNode, TypeDescriptor* outType)
 {
 	//unused by our assumption 
+	/*
 	AST_NODE* p = exprNode;
 	while(p != NULL){
 	  if(p->child->nodeType == EXPR_NODE){
@@ -410,7 +445,7 @@ void evaluateExprValue(AST_NODE* exprNode, TypeDescriptor* outType)
 	   	
 	   } 
  	   p->rightSibling;
-	}
+	}*/
 	
 }
 
@@ -422,6 +457,7 @@ void processExprNode(AST_NODE* exprNode)
         if(p->nodeType == IDENTIFIER_NODE)
             if(declaredLocally(p->semantic_value.identifierSemanticValue.identifierName)==0){
                 printf("ID %s undeclared",p->semantic_value.identifierSemanticValue.identifierName);
+		printf("Error found in line %d\n", p->linenumber);
             }
         else if(p->nodeType == EXPR_NODE){
             processExprNode(p);
@@ -437,11 +473,13 @@ void processVariableLValue(AST_NODE* idNode)
 { 
     //BONUS
     if(idNode->nodeType != CONST_VALUE_NODE){
-	printf("Lvalue shall be a variable\n");
+	printf("Lvalue should  be a variable\n");
+	printf("Error found in line %d\n", idNode->linenumber);
     }else{
         char* name = (idNode->semantic_value.identifierSemanticValue.identifierName);
         if(declaredLocally(name) == 0){
  	    printf("ID %s undeclared",name);
+	    printf("Error found in line %d\n", idNode->linenumber);
         }
     }
 }
@@ -461,14 +499,16 @@ void checkReturnStmt(AST_NODE* returnNode)
 {
 	if(returnNode->child->dataType == f_global_return_type)
 	    printf("incompatible return type.\n");
+  	    printf("Error found in line %d\n", returnNode->linenumber);
 }
 
 void processBlockNode(AST_NODE* blockNode)
 {
+    printf("in processBlockNode\n");
     
     AST_NODE* p = blockNode->child;
     while(p != NULL ){
-       switch(p->child.nodeType){
+       switch(p->nodeType){
 	   case STMT_LIST_NODE:
 		processStmtNode(p->child);
 		break;
@@ -480,6 +520,7 @@ void processBlockNode(AST_NODE* blockNode)
 		break;
 	   default:
 	        printf("blocknode's child case undefined\n");
+		printf("Error found in line %d\n", p->linenumber);
       }
        p = p->rightSibling;
     }
@@ -488,9 +529,10 @@ void processBlockNode(AST_NODE* blockNode)
 
 void processStmtNode(AST_NODE* stmtNode)
 {
-  AST_NODE* p = stmtNode->child;
+  printf("in processStmtNode\n");
+  AST_NODE* p = stmtNode;
   while(p!=NULL){ 
-    switch(stmtNode->semantic_value.kind){
+    switch(p->semantic_value.stmtSemanticValue.kind){
         case RETURN_STMT:
 		processStmtNode(p);
         	break;
@@ -511,6 +553,7 @@ void processStmtNode(AST_NODE* stmtNode)
 		break;
         default:
 		printf("unhandled stmnt kind\n");
+		printf("Error found in line %d\n", p->linenumber);
     }
     p = p->rightSibling;
   }
@@ -519,7 +562,7 @@ void processStmtNode(AST_NODE* stmtNode)
 
 void processGeneralNode(AST_NODE *node)
 {
-    switch(node->semantic_value.kind){
+    switch(node->nodeType){
         case NONEMPTY_ASSIGN_EXPR_LIST_NODE:
 	    //check the assignment
             checkAssignOrExpr(node->child);
@@ -544,7 +587,7 @@ void declareFunction(AST_NODE* declarationNode)
     functionSig = (FunctionSignature*) malloc(sizeof(FunctionSignature));
     functionSig->parameterList = NULL;
     functionSig->parametersCount = 0;
-    f_global_return_type = functionSig->returnType = p->DATA_TYPE;
+    f_global_return_type = functionSig->returnType = p->dataType;
     
     p = p->rightSibling;
     char* function_name = p->semantic_value.identifierSemanticValue.identifierName;
@@ -554,7 +597,7 @@ void declareFunction(AST_NODE* declarationNode)
     
     if(p->child != NULL){//if the function has at least one parameter
 	p = p->child;
-	Parameter* para_this = NULL: 
+	Parameter* para_this = NULL; 
 	while(p!=NULL){//while there is an unvisited parameter
            AST_NODE* q = p->child;
 	   functionSig->parametersCount++;
@@ -592,11 +635,8 @@ void declareFunction(AST_NODE* declarationNode)
 
     SymbolAttribute* symbol_att = (SymbolAttribute*) malloc(sizeof(SymbolAttribute));
     symbol_att->attributeKind = FUNCTION_SIGNATURE;
-    symbol_att->attr = functionSig;
+    symbol_att->attr.functionSignature = functionSig;
     enterSymbol(function_name,symbol_att);
-
+    printf("calling processBlockNode\n");
     processBlockNode(p_to_block->rightSibling);
 }
-
-
-

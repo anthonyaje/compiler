@@ -64,7 +64,8 @@ void initializeSymbolTable()
 
 void symbolTableEnd()
 {
-   free(symbolTable.scopeDisplay);
+   //FIXME: free them
+   //free(symbolTable.scopeDisplay);
    //free()
 }
 

@@ -768,15 +768,16 @@ int argc;
 char *argv[];
   {
      yyin = fopen(argv[1],"r");
+     printf("entering yyparser()\n"); 
      yyparse();
-     // printGV(prog, NULL);
-     
+     printGV(prog, NULL);
+     printf("entering intializeSymTable()\n"); 
      initializeSymbolTable();
-     
+     printf("entering semanticAnalysis()\n"); 
      semanticAnalysis(prog);
-     
+     printf("entering symbolTableEnd()\n"); 
      symbolTableEnd();
-     if (!g_anyErrorOccur) {
+     if(!g_anyErrorOccur) {
         printf("Parsing completed. No errors found.\n");
      }
   } /* main */
