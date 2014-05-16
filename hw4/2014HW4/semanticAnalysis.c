@@ -351,33 +351,57 @@ void checkParameterPassing(Parameter* formalParameter, AST_NODE* actualParameter
 	// may have too many or too few arguments
 	AST_NODE* p = actualParameter->child;
 	Parameter* q = formalParameter;
+	int i=0;
 	while((p!=NULL) && (q!=NULL)){
 	    printf("in param passing while\n");
 	    TypeDescriptor temp_type;
-            char* param_name = p->semantic_value.identifierSemanticValue.identifierName;
-	printf("param_name: %s\n",param_name);    
-	SymbolTableEntry* entry = retrieveSymbol(param_name); 
-	    printf("$%s retrieved\n",param_name);
+	    SymbolTableEntry* entry=NULL; 
+	    char* param_name;
+	    int type_flag; //0=scalar
+	printf("i: %d\n", i++);
+            if(p->nodeType == IDENTIFIER_NODE){
+		param_name = p->semantic_value.identifierSemanticValue.identifierName;
+	    	printf("param_name: %s\n",param_name);    
+	    	entry = retrieveSymbol(param_name);
+	    	printf("$%s retrieved\n",param_name);
+		if(entry->attribute->attr.typeDescriptor->kind == SCALAR_TYPE_DESCRIPTOR)
+		    type_flag = 0;
+		else
+		    type_flag = 1;
+	    } 
+  	    else if(p->nodeType == CONST_VALUE_NODE){
+		//entry = (SymbolTableEntry*) malloc(sizeof(SymbolTableEntry));
+	        //entry->attribute->attr.typeDescriptor->kind = SCALAR_TYPE_DESCRIPTOR;
+ 	        printf("in const\n");
+		param_name = "Constant";
+		type_flag = 0;
+ 	        printf("in const\n");
+	    } 
+	printf("i: %d\n", i++);
 	    if(entry==NULL){
 	    	printf("dump\n");
 	    }
+	printf("before fififififii\n");
 	    if(p->nodeType == EXPR_NODE){ 
+		printf("test 1\n");
 		//ASSUME: expr return a SCALAR_TYPE
 		//evaluateExprValue(p->nodeType, &temp_type);
-	        if(entry->attribute->attr.typeDescriptor->kind != SCALAR_TYPE_DESCRIPTOR){
+	        if(q->type->kind != SCALAR_TYPE_DESCRIPTOR){
 		    printf("Scalar <EXPRESSION> passed to array\n");
 	    	    printf("Error found in line %d\n", p->linenumber);
 		}
+		printf("test 1\n");
 	    }
-	    else if((entry->attribute->attr.typeDescriptor->kind == SCALAR_TYPE_DESCRIPTOR)&&(p->semantic_value.identifierSemanticValue.kind == ARRAY_ID)){
-		    printf("Array %s passed to scalar\n",p->semantic_value.identifierSemanticValue.identifierName);
+	    else if((type_flag==0)&&(q->type->kind == ARRAY_TYPE_DESCRIPTOR)){
+		    printf("Scalar %s passed to array\n",param_name);
 	            printf("Error found in line %d\n", p->linenumber);
 	    }   
-	    else if((entry->attribute->attr.typeDescriptor->kind == ARRAY_TYPE_DESCRIPTOR)&&(p->semantic_value.identifierSemanticValue.kind != ARRAY_ID)){
-		    printf("Scalar %s passed to array\n",p->semantic_value.identifierSemanticValue.identifierName);
+	    else if((type_flag==1)&&(q->type->kind == SCALAR_TYPE_DESCRIPTOR)){
+		    //printf("IN!!!!\n");
+		    printf("Array %s passed to scalar\n",param_name);
 	            printf("Error found in line %d\n", p->linenumber);
 	    }
-	    	    
+	    printf("after fifififif\n");	    
 	    p = p->rightSibling;
 	    q = q->next;
 	}
