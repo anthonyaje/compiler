@@ -82,19 +82,27 @@ SymbolTableEntry* retrieveSymbol(char* symbolName)
 
 SymbolTableEntry* enterSymbol(char* symbolName, SymbolAttribute* attribute)
 {
+	int i=0;
+	//printf("i: %d\n",i++);
 	SymbolTableEntry* entry = newSymbolTableEntry(symbolTable.currentLevel);
 	entry->name = symbolName;
 	entry->attribute = attribute;
+	//printf("i:  %d\n",i++);
         SymbolTableEntry* old_symbol = retrieveSymbol(entry->name);
+	//printf("i:  %d\n",i++);
         if((old_symbol != NULL) && (old_symbol->nestingLevel == entry->nestingLevel)){
 	   //raise error
 	   printf("ID %s redeclared.\n");
 	   removeFromHashTrain(HASH(old_symbol->name),old_symbol);
  	}
+	//printf("i:  %d\n",i++);
 	enterIntoHashTrain(HASH(entry->name),entry);
+	//printf("i:  %d\n",i++);
 	//scope pointer
  	entry->nextInSameLevel = symbolTable.scopeDisplay[entry->nestingLevel]; 
+	//printf("i:  %d\n",i++);
 	symbolTable.scopeDisplay[entry->nestingLevel] = entry;
+	//printf("i:  %d\n",i++);
 
 }
 

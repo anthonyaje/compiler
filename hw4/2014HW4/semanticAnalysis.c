@@ -184,6 +184,7 @@ void declareIdList(AST_NODE* declarationNode, SymbolAttributeKind isVariableOrTy
   AST_NODE* child = declarationNode->child;
   if(isVariableOrTypeAttribute == VARIABLE_ATTRIBUTE){
   	AST_NODE* p = child->rightSibling;
+        AST_NODE* q  = p;
   	while(p!=NULL){
 	    SymbolAttribute* symbol_att = (SymbolAttribute*) malloc(sizeof(SymbolAttribute));
 	    symbol_att->attributeKind = isVariableOrTypeAttribute;
@@ -191,8 +192,10 @@ void declareIdList(AST_NODE* declarationNode, SymbolAttributeKind isVariableOrTy
 	    type_desc->kind = SCALAR_TYPE_DESCRIPTOR;
 	    type_desc->properties.dataType = p->dataType;
 	    if(p->semantic_value.identifierSemanticValue.kind == ARRAY_ID){
-	    //if array type then calculate dimension
-	    	p = p-> child;
+	   	 //if array type then calculate dimension
+	    	//printf("Ready to calculate array dim\n");
+	    	q=p;
+		p = p-> child;
 		int dim = 0;
 		while(p != NULL){
 			dim++;
@@ -202,7 +205,11 @@ void declareIdList(AST_NODE* declarationNode, SymbolAttributeKind isVariableOrTy
 		type_desc->properties.arrayProperties.dimension = dim;
 	    }
 	    symbol_att->attr.typeDescriptor = type_desc;
+	    //printf("Array dim calculation completed\n");
+            p=q;
   	    enterSymbol(p->semantic_value.identifierSemanticValue.identifierName,symbol_att);
+  	    //enterSymbol("",symbol_att);
+	    //printf("Symbol added to symboltable\n");
 	    p = p->rightSibling;
 	}
   } else{
@@ -308,15 +315,17 @@ void checkWriteFunction(AST_NODE* functionCallNode)
 
 void checkFunctionCall(AST_NODE* functionCallNode)
 {
-	//DADA
+    //DADA
+    printf("in checkFunctionCall\n");
     AST_NODE* p = functionCallNode -> child;
     char* name = p->semantic_value.identifierSemanticValue.identifierName;
+    printf("my name: %s\n",name);
     if(strcmp(name,"write") != 0){
 	if(declaredLocally(name) == 0){
 	    printf("ID %s undeclared",name);
 	    printf("Error found in line %d\n", p->linenumber);
-            checkParameterPassing(retrieveSymbol(name)->attribute->attr.functionSignature->parameterList, p->rightSibling);
         }
+        checkParameterPassing(retrieveSymbol(name)->attribute->attr.functionSignature->parameterList, p->rightSibling);
     } 
     else if(strcmp(name,"write") == 0){
     	if( p->rightSibling->child->semantic_value.const1->const_type != CONST_STRING_TYPE){
@@ -343,20 +352,28 @@ void checkParameterPassing(Parameter* formalParameter, AST_NODE* actualParameter
 	AST_NODE* p = actualParameter->child;
 	Parameter* q = formalParameter;
 	while((p!=NULL) && (q!=NULL)){
+	    printf("in param passing while\n");
 	    TypeDescriptor temp_type;
+            char* param_name = p->semantic_value.identifierSemanticValue.identifierName;
+	printf("param_name: %s\n",param_name);    
+	SymbolTableEntry* entry = retrieveSymbol(param_name); 
+	    printf("$%s retrieved\n",param_name);
+	    if(entry==NULL){
+	    	printf("dump\n");
+	    }
 	    if(p->nodeType == EXPR_NODE){ 
 		//ASSUME: expr return a SCALAR_TYPE
 		//evaluateExprValue(p->nodeType, &temp_type);
-	        if(q->type->kind != SCALAR_TYPE_DESCRIPTOR){
+	        if(entry->attribute->attr.typeDescriptor->kind != SCALAR_TYPE_DESCRIPTOR){
 		    printf("Scalar <EXPRESSION> passed to array\n");
 	    	    printf("Error found in line %d\n", p->linenumber);
 		}
 	    }
-	    else if((q->type->kind == SCALAR_TYPE_DESCRIPTOR)&&(p->semantic_value.identifierSemanticValue.kind == ARRAY_ID)){
+	    else if((entry->attribute->attr.typeDescriptor->kind == SCALAR_TYPE_DESCRIPTOR)&&(p->semantic_value.identifierSemanticValue.kind == ARRAY_ID)){
 		    printf("Array %s passed to scalar\n",p->semantic_value.identifierSemanticValue.identifierName);
 	            printf("Error found in line %d\n", p->linenumber);
 	    }   
-	    else if((q->type->kind == ARRAY_TYPE_DESCRIPTOR)&&(p->semantic_value.identifierSemanticValue.kind != ARRAY_ID)){
+	    else if((entry->attribute->attr.typeDescriptor->kind == ARRAY_TYPE_DESCRIPTOR)&&(p->semantic_value.identifierSemanticValue.kind != ARRAY_ID)){
 		    printf("Scalar %s passed to array\n",p->semantic_value.identifierSemanticValue.identifierName);
 	            printf("Error found in line %d\n", p->linenumber);
 	    }
