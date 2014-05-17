@@ -297,16 +297,7 @@ void checkAssignmentStmt(AST_NODE* assignmentNode)
     printf("in checkAssignment\n");
     AST_NODE* p = assignmentNode->child;
     //BONUS
-    //processVariableLValue(p)
-    char* name = (p->semantic_value.identifierSemanticValue.identifierName);
-    printf("check if $%s is declared\n",name);
-    if(declaredLocally(name) == 0){
- 	printf("ID %s undeclared",name);
-	printf("Error found in line %d\n", p->linenumber);
-
-    }
-    //FIXME check which one to use: evaluateExprValue processExprNode processExprRelatedNode getExprOrConstValue
-    //evaluateExprValue(p->rightSibling);
+    processVariableLValue(p);
     processExprRelatedNode(p->rightSibling);
 }
 
@@ -433,13 +424,16 @@ void checkParameterPassing(Parameter* formalParameter, AST_NODE* actualParameter
 
 void processExprRelatedNode(AST_NODE* exprRelatedNode)
 {
-    AST_NODE* p = exprRelatedNode->child;
+    AST_NODE* p = exprRelatedNode;
     while(p!=NULL){
-	if(p->nodeType == IDENTIFIER_NODE)
-	    if(declaredLocally(p->semantic_value.identifierSemanticValue.identifierName)==0){
+	if(p->nodeType == IDENTIFIER_NODE){
+	    /*if(declaredLocally(p->semantic_value.identifierSemanticValue.identifierName)==0){
 		printf("ID %s undeclared",p->semantic_value.identifierSemanticValue.identifierName);
 	        printf("Error found in line %d\n", p->linenumber);
 	    }
+	    */
+	    processVariableLValue(p);
+	}
         else if(p->nodeType == EXPR_NODE){
 	    processExprNode(p);
         }
@@ -509,31 +503,53 @@ void processExprNode(AST_NODE* exprNode)
     AST_NODE* p = exprNode->child;
     while(p!=NULL){
         if(p->nodeType == IDENTIFIER_NODE)
-            if(declaredLocally(p->semantic_value.identifierSemanticValue.identifierName)==0){
+	    processVariableLValue(p);
+            /*if(declaredLocally(p->semantic_value.identifierSemanticValue.identifierName)==0){
                 printf("ID %s undeclared",p->semantic_value.identifierSemanticValue.identifierName);
 		printf("Error found in line %d\n", p->linenumber);
-            }
+            }*/
         else if(p->nodeType == EXPR_NODE){
             processExprNode(p);
         }
 
         p = p->rightSibling;
     }
-
 }
 
 
 void processVariableLValue(AST_NODE* idNode)
 { 
     //BONUS
-    if(idNode->nodeType != CONST_VALUE_NODE){
-	printf("Lvalue should  be a variable\n");
+    char* name = (idNode->semantic_value.identifierSemanticValue.identifierName);
+    if(declaredLocally(name) == 0){
+ 	printf("ID %s undeclared",name);
 	printf("Error found in line %d\n", idNode->linenumber);
+	return;
+    }
+    int formal_dim = 0;
+    if(retrieveSymbol(name)->attribute->attr.typeDescriptor->kind == ARRAY_TYPE_DESCRIPTOR){
+	formal_dim = retrieveSymbol(name)->attribute->attr.typeDescriptor->properties.arrayProperties.dimension;
+        if(idNode->semantic_value.identifierSemanticValue.kind == ARRAY_ID){
+    	   int dim = 0;
+	   AST_NODE* p = idNode->child;
+	   while(p != NULL){
+		dim++;
+		p = p->rightSibling;
+	   }
+ 	   if(dim != formal_dim){
+	        printf("Incompatible array dimension\n");
+	        printf("Error found in line %d\n", idNode->linenumber);
+	   }
+        }
+	else {
+	 //   printf();
+	}
+	
     }else{
-        char* name = (idNode->semantic_value.identifierSemanticValue.identifierName);
-        if(declaredLocally(name) == 0){
- 	    printf("ID %s undeclared",name);
+        if(idNode->semantic_value.identifierSemanticValue.kind == ARRAY_ID){
+	    printf("$%s is not an array type",name);
 	    printf("Error found in line %d\n", idNode->linenumber);
+
         }
     }
 }
