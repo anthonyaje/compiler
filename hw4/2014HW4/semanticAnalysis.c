@@ -213,6 +213,11 @@ void declareIdList(AST_NODE* declarationNode, SymbolAttributeKind isVariableOrTy
 	    	q=p;
 		p = p-> child;
 		int dim = 0;
+		if(traverseExpr(p) == 0){
+		    //final_type = FLOAT_TYPE;
+		    printf("array index must be an integer\n");
+		    printf("Error found in line %d\n", p->linenumber);
+		}
 		while(p != NULL){
 			dim++;
 			p = p->rightSibling; 
@@ -396,6 +401,11 @@ void checkParameterPassing(Parameter* formalParameter, AST_NODE* actualParameter
 		    printf("Scalar <EXPRESSION> passed to array\n");
 	    	    printf("Error found in line %d\n", p->linenumber);
 		}
+		else{
+		    //FIXME
+		    checkAssignOrExpr(p);
+		}
+	        
 	    }
 	    else if((type_flag==0)&&(q->type->kind == ARRAY_TYPE_DESCRIPTOR)){
 		    printf("Scalar %s passed to array\n",param_name);
@@ -532,6 +542,11 @@ void processVariableLValue(AST_NODE* idNode)
         if(idNode->semantic_value.identifierSemanticValue.kind == ARRAY_ID){
     	   int dim = 0;
 	   AST_NODE* p = idNode->child;
+ 	   if(traverseExpr(p) == 0){
+	      //makesure expression is an int
+ 	      printf("array index must be an integer\n");
+	      printf("Error found in line %d\n", idNode->linenumber);
+	   }
 	   while(p != NULL){
 		dim++;
 		p = p->rightSibling;
