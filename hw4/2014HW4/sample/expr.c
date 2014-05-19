@@ -1,4 +1,4 @@
-int fn1(){
+int fn1() {
     return 1;
 }
 float fn3() {
