@@ -1,20 +1,20 @@
+int q;
 int main() {
 	int i;
-        int p;
-        int k, j;
-	for (i=0; i<9; i=i+1) {
-            /* empty */
+        int p,n;
+        int m;
+	for (q=0; i<9; i=i*1+1/2) {
 	}
         for (i=0, p=4+4; i<9; i=i+1, p=i) {
             write("test");
         }
         for (;;) {
-            /*empty*/
         }
         while (1) {
         }
-        while (2) {
-            write("haha");
+	q=2;
+        while (q==2) {
+            write(2);
             write("wow");
         }
         if (k == j) {
@@ -27,4 +27,5 @@ int main() {
         } else {
             write("third");
         }
+        
 }

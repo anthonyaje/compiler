@@ -35,6 +35,9 @@ void processVariableRValue(AST_NODE* idNode);
 void processConstValueNode(AST_NODE* constValueNode);
 void getExprOrConstValue(AST_NODE* exprOrConstNode, int* iValue, float* fValue); //aje: may be use in array
 void evaluateExprValue(AST_NODE* exprNode,TypeDescriptor* outType); //aje: 
+//additional functions
+DATA_TYPE compareTool(char*);
+int traverseExpr(AST_NODE* );
 
 
 typedef enum ErrorMsgKind
@@ -102,7 +105,7 @@ void printErrorMsg(AST_NODE* node, ErrorMsgKind errorMsgKind)
 
 void semanticAnalysis(AST_NODE *root)
 {
-    processProgramNode(root);
+    processProgramNode(root->child);
 }
 
 
@@ -118,25 +121,39 @@ DATA_TYPE getBiggerType(DATA_TYPE dataType1, DATA_TYPE dataType2)
 
 void processProgramNode(AST_NODE *programNode)
 {
-  AST_NODE* child = programNode->child;
-  switch(child->nodeType){
-      case DECLARATION_NODE:			//FUNCTION_DECL
-	  processDeclarationNode(child);
+  printf("WAAA!! in  programNode\n");
+  AST_NODE* p = programNode;
+  //while(p!=NULL){
+  if(p->nodeType == VARIABLE_DECL_LIST_NODE){
+	processDeclarationNode(p->child);
+	processDeclarationNode(p->rightSibling);
+  }else{
+     switch(p->nodeType){
+       case DECLARATION_NODE:			//FUNCTION_DECL
+	  processDeclarationNode(p);
           break;
-      case VARIABLE_DECL_LIST_NODE:		//VARIABLE_DECL_LIST_NODE->child == VARIABLE_DECL
-	  processDeclarationNode(child->child);
+       case VARIABLE_DECL_LIST_NODE:		//VARIABLE_DECL_LIST_NODE->child == VARIABLE_DECL
+	  processDeclarationNode(p->child);
           break;
-      default:
+       default:
    	  printf("uncaught case1\n");
-          printf("Error found in line %d\n", child->linenumber);
+          printf("Error found in line %d\n", p->linenumber);
+     }
   }
+
 }
 
 
 void processDeclarationNode(AST_NODE* declarationNode)
 {//recursive call to traverse the sibling
-  if(declarationNode == NULL){ return; }
-  else{
+  printf("WAAA! in processDeclarationNode();\n");
+  if(declarationNode == NULL){ 
+	return; 
+  }
+  else if(declarationNode->nodeType == VARIABLE_DECL_LIST_NODE){
+     processProgramNode(declarationNode);
+  }
+  else {
      switch(declarationNode->semantic_value.declSemanticValue.kind){
         case VARIABLE_DECL :
   	    declareIdList(declarationNode, VARIABLE_ATTRIBUTE, 1);
@@ -168,8 +185,9 @@ void processTypeNode(AST_NODE* idNodeAsType)
     SymbolAttribute* symbol_att = (SymbolAttribute*) malloc(sizeof(SymbolAttribute));
     symbol_att->attributeKind = TYPE_ATTRIBUTE;
     TypeDescriptor* type_desc = (TypeDescriptor*) malloc(sizeof(TypeDescriptor));
-    type_desc->kind = SCALAR_TYPE_DESCRIPTOR;//FIXME
-    type_desc->properties.dataType = p->dataType;
+    type_desc->kind = SCALAR_TYPE_DESCRIPTOR;
+    
+    type_desc->properties.dataType = compareTool(p->semantic_value.identifierSemanticValue.identifierName);
     symbol_att->attr.typeDescriptor = type_desc;
 
     p=p->rightSibling;
@@ -181,26 +199,22 @@ void processTypeNode(AST_NODE* idNodeAsType)
 
 void declareIdList(AST_NODE* declarationNode, SymbolAttributeKind isVariableOrTypeAttribute, int ignoreArrayFirstDimSize)
 {
+  printf("WAAA!! in declaredIdList()\n");
   AST_NODE* child = declarationNode->child;
   if(isVariableOrTypeAttribute == VARIABLE_ATTRIBUTE){
-	DATA_TYPE var_type;
-	if(strcmp(child->semantic_value.identifierSemanticValue.identifierName,"int")==0)
-		var_type = INT_TYPE;
-	else if(strcmp(child->semantic_value.identifierSemanticValue.identifierName,"float")==0)
-		var_type = FLOAT_TYPE;
-        else{
-		SymbolTableEntry* se = retrieveSymbol(child->semantic_value.identifierSemanticValue.identifierName);
-	        if(se != NULL){
-		    var_type = se->attribute->attr.typeDescriptor->properties.dataType;
-		}
-		else{
-	            printf("UNDEFINED type was used in line %d\n",child->linenumber);
-		    return;
-		}
-	}
-
+    DATA_TYPE var_type = compareTool(child->semantic_value.identifierSemanticValue.identifierName);
+    if(var_type == ERROR_TYPE){
+	     SymbolTableEntry* se = retrieveSymbol(child->semantic_value.identifierSemanticValue.identifierName);
+            if(se != NULL){
+	        var_type = se->attribute->attr.typeDescriptor->properties.dataType;
+	    }
+	    else{
+	        printf("UNDEFINED type was used in line %d\n",child->linenumber);
+		return;
+	    }
+    }
   	AST_NODE* p = child->rightSibling;
-        AST_NODE* q  = p;
+        AST_NODE* q;
   	while(p!=NULL){
 	    SymbolAttribute* symbol_att = (SymbolAttribute*) malloc(sizeof(SymbolAttribute));
 	    symbol_att->attributeKind = isVariableOrTypeAttribute;
@@ -224,10 +238,11 @@ void declareIdList(AST_NODE* declarationNode, SymbolAttributeKind isVariableOrTy
 		}
 		type_desc->kind = ARRAY_TYPE_DESCRIPTOR;
 		type_desc->properties.arrayProperties.dimension = dim;
+                p=q;
 	    }
 	    symbol_att->attr.typeDescriptor = type_desc;
 	    //printf("Array dim calculation completed\n");
-            p=q;
+            //p=q;
   	    enterSymbol(p->semantic_value.identifierSemanticValue.identifierName,symbol_att);
   	    //enterSymbol("",symbol_att);
 	    //printf("Symbol added to symboltable\n");
@@ -258,6 +273,8 @@ void declareIdList(AST_NODE* declarationNode, SymbolAttributeKind isVariableOrTy
 
 void checkAssignOrExpr(AST_NODE* assignOrExprRelatedNode)
 {
+printf("Wiii!! in checkAssignmenOrExpr()\n"); 
+  //AST_NODE* p = assignOrExprRelatedNode->child;
   AST_NODE* p = assignOrExprRelatedNode->child;
   while(p!=NULL){
     if(p->nodeType==STMT_NODE){
@@ -299,7 +316,8 @@ void checkForStmt(AST_NODE* forNode)
 void checkAssignmentStmt(AST_NODE* assignmentNode)
 {
     //AJE
-    printf("in checkAssignment\n");
+//    printf("in checkAssignment\n");
+printf("Wiii!! in checkAssignmenOrExpr()\n"); 
     AST_NODE* p = assignmentNode->child;
     //BONUS
     processVariableLValue(p);
@@ -342,10 +360,15 @@ void checkFunctionCall(AST_NODE* functionCallNode)
         checkParameterPassing(retrieveSymbol(name)->attribute->attr.functionSignature->parameterList, p->rightSibling,name);
     } 
     else if(strcmp(name,"write") == 0){
-    	if( p->rightSibling->child->semantic_value.const1->const_type != CONST_STRING_TYPE){
+    	/*char a,b;
+	char* c =  p->rightSibling->child->semantic_value.const1->const_u.sc;
+	a = c[0];
+	b = c[strlen(c)-1];
+    	if( (a!='"') || (b!='"')){
 	    printf("parameter to write function is not CONST_STRING_TYPE\n");
 	    printf("Error found in line %d\n", p->rightSibling->child->linenumber);
-	}     
+	}
+	*/     
     }
     
 
@@ -619,6 +642,7 @@ int traverseExpr(AST_NODE* p){
 
 void checkReturnStmt(AST_NODE* returnNode)
 {
+    //Assume each function must "return", otherwise no error detected
     printf("in CheckReturnStmt()\n");
     DATA_TYPE final_type;
     AST_NODE* p = returnNode->child;
@@ -645,6 +669,9 @@ void checkReturnStmt(AST_NODE* returnNode)
 		final_type = FLOAT_TYPE;
 	    }
 	    break;
+	case NUL_NODE:
+	   final_type = VOID_TYPE; 
+	   break;
 	default:
 	    printf("checkReturnStmt(): default case\n");
     }
@@ -733,6 +760,25 @@ void processDeclDimList(AST_NODE* idNode, TypeDescriptor* typeDescriptor, int ig
   //seems like integrated withe the declareFunction  
 }
 
+DATA_TYPE compareTool(char* p){
+DATA_TYPE final_type;
+if(strcmp(p,"int")==0)
+    final_type = INT_TYPE;
+else if(strcmp(p,"float")==0)
+    final_type = FLOAT_TYPE;
+else if(strcmp(p,"void")==0)
+    final_type = VOID_TYPE;
+else if(strcmp(p,"string")==0)
+    final_type = CONST_STRING_TYPE;
+else if(strcmp(p,"int*")==0)
+    final_type = INT_PTR_TYPE;
+else if(strcmp(p,"float*")==0)
+    final_type = FLOAT_PTR_TYPE;
+else 
+    final_type = ERROR_TYPE;
+return final_type;
+}
+
 
 void declareFunction(AST_NODE* declarationNode)
 {
@@ -741,20 +787,16 @@ void declareFunction(AST_NODE* declarationNode)
     functionSig = (FunctionSignature*) malloc(sizeof(FunctionSignature));
     functionSig->parameterList = NULL;
     functionSig->parametersCount = 0;
-    DATA_TYPE var_type;
-    if(strcmp(p->semantic_value.identifierSemanticValue.identifierName,"int")==0)
-	var_type = INT_TYPE;
-    else if(strcmp(p->semantic_value.identifierSemanticValue.identifierName,"float")==0)
- 	var_type = FLOAT_TYPE;
-    else{
-	SymbolTableEntry* se = retrieveSymbol(p->semantic_value.identifierSemanticValue.identifierName);
-        if(se != NULL){
-	    var_type = se->attribute->attr.typeDescriptor->properties.dataType;
-	}
-	else{
-	    printf("UNDEFINED type was used in line %d\n",p->linenumber);
-	    return;
-	}
+    DATA_TYPE var_type = compareTool(p->semantic_value.identifierSemanticValue.identifierName);
+    if(var_type == ERROR_TYPE){
+	     SymbolTableEntry* se = retrieveSymbol(p->semantic_value.identifierSemanticValue.identifierName);
+            if(se != NULL){
+	        var_type = se->attribute->attr.typeDescriptor->properties.dataType;
+	    }
+	    else{
+	        printf("UNDEFINED type was used in line %d\n",p->linenumber);
+		return;
+	    }
     }
     f_global_return_type = functionSig->returnType = var_type;
     

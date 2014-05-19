@@ -148,7 +148,8 @@ void removeSymbol(char* symbolName)
 int declaredLocally(char* symbolName)
 {
     SymbolTableEntry* old_symbol = retrieveSymbol(symbolName);
-        if((old_symbol != NULL) && (old_symbol->nestingLevel == symbolTable.currentLevel)){
+        //if((old_symbol != NULL) && (old_symbol->nestingLevel == symbolTable.currentLevel)){
+        if((old_symbol != NULL)){
 	   return 1;
 	}else{
 	   return 0;
