@@ -1,0 +1,9 @@
+rm -f parser parser.tab.c parser.tab.o lex.yy.c alloc.o functions.o semanticAnalysis.o symbolTable.o parser.output parser.tab.h
+bison -v -d parser.y
+flex lexer3.l
+gcc -g -c alloc.c
+gcc -g -c symbolTable.c
+gcc -g -c semanticAnalysis.c
+gcc -g -c parser.tab.c
+gcc -g -c functions.c
+gcc -g -o parser parser.tab.o alloc.o functions.o symbolTable.o semanticAnalysis.o -lfl 

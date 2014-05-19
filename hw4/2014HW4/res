@@ -1,0 +1,110 @@
+WAAA!! in  programNode
+WAAA! in processDeclarationNode();
+WAAA!! in declaredIdList()
+START: enterSymbol
+IN enterIntoHashTrain
+OUT enterIntoHashTrain
+CLOSE: enterSymbol
+WAAA! in processDeclarationNode();
+WAAA! in processDeclarationNode();
+in processDeclNode-FUNCTION_DECL
+START: enterSymbol
+IN enterIntoHashTrain
+OUT enterIntoHashTrain
+CLOSE: enterSymbol
+calling processBlockNode
+in processBlockNode
+START: Scope 1 opened
+WAAA! in processDeclarationNode();
+WAAA!! in declaredIdList()
+START: enterSymbol
+IN enterIntoHashTrain
+OUT enterIntoHashTrain
+CLOSE: enterSymbol
+WAAA! in processDeclarationNode();
+WAAA!! in declaredIdList()
+START: enterSymbol
+IN enterIntoHashTrain
+OUT enterIntoHashTrain
+CLOSE: enterSymbol
+START: enterSymbol
+IN enterIntoHashTrain
+OUT enterIntoHashTrain
+CLOSE: enterSymbol
+WAAA! in processDeclarationNode();
+WAAA!! in declaredIdList()
+START: enterSymbol
+IN enterIntoHashTrain
+OUT enterIntoHashTrain
+CLOSE: enterSymbol
+WAAA! in processDeclarationNode();
+in processStmtNode
+Wiii!! in checkAssignmenOrExpr()
+Wiii!! in checkAssignmenOrExpr()
+in processBlockNode
+START: Scope 2 opened
+START: closeScope
+Scope 2 closed
+Wiii!! in checkAssignmenOrExpr()
+Wiii!! in checkAssignmenOrExpr()
+in processBlockNode
+START: Scope 2 opened
+in processStmtNode
+START: closeScope
+Scope 2 closed
+in processBlockNode
+START: Scope 2 opened
+START: closeScope
+Scope 2 closed
+Wiii!! in checkAssignmenOrExpr()
+in processBlockNode
+START: Scope 2 opened
+START: closeScope
+Scope 2 closed
+Wiii!! in checkAssignmenOrExpr()
+Wiii!! in checkAssignmenOrExpr()
+in processBlockNode
+START: Scope 2 opened
+in processStmtNode
+START: closeScope
+Scope 2 closed
+ID k undeclared
+Error found in line 20
+ID j undeclared
+Error found in line 20
+in processBlockNode
+START: Scope 2 opened
+in processStmtNode
+START: closeScope
+Scope 2 closed
+in processBlockNode
+START: Scope 2 opened
+START: closeScope
+Scope 2 closed
+ID k undeclared
+Error found in line 23
+ID j undeclared
+Error found in line 23
+in processBlockNode
+START: Scope 2 opened
+in processStmtNode
+START: closeScope
+Scope 2 closed
+ID j undeclared
+Error found in line 25
+ID k undeclared
+Error found in line 25
+in processBlockNode
+START: Scope 2 opened
+in processStmtNode
+START: closeScope
+Scope 2 closed
+in processBlockNode
+START: Scope 2 opened
+in processStmtNode
+START: closeScope
+Scope 2 closed
+START: closeScope
+Scope 1 closed
+WAAA! in processDeclarationNode();
+Parsing completed. No errors found.

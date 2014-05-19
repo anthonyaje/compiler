@@ -331,15 +331,26 @@ void checkIfStmt(AST_NODE* ifNode)
     AST_NODE* p = ifNode->child;
     processExprRelatedNode(p);
     p = p->rightSibling;
-    processBlockNode(p);
-    p = p->rightSibling;
-    if(p!=NULL){
+    //DADA
+    while(p!=NULL){
+        if(p->nodeType == BLOCK_NODE){
+            processBlockNode(p);
+        }
+	else if(p->nodeType == STMT_NODE){
+	    processStmtNode(p);
+	}
+	else{
+	    printf("Uncaught checkif case\n");
+	}
+        p = p->rightSibling;
+    }
+    /*if(p!=NULL){
 	//FIXME check if it is ELSEIF ELSE: block->stmt_if block->block 
 	if(p->nodeType == STMT_NODE)
         checkIfStmt(p);
 	else
 	processBlockNode(p);
-    }
+    }*/
    
 }
 
@@ -356,7 +367,7 @@ void checkFunctionCall(AST_NODE* functionCallNode)
 	if(declaredLocally(name) == 0){
 	    printf("ID %s undeclared\n",name);
 	    printf("Error found in line %d\n", p->linenumber);
-        }
+        }else
         checkParameterPassing(retrieveSymbol(name)->attribute->attr.functionSignature->parameterList, p->rightSibling,name);
     } 
     else if(strcmp(name,"write") == 0){
@@ -633,6 +644,27 @@ int traverseExpr(AST_NODE* p){
 	    } else{
 		return 1;
 	    }
+	}
+    }
+    //DADA
+    else if(p->nodeType == STMT_NODE){
+	if(p->semantic_value.stmtSemanticValue.kind == FUNCTION_CALL_STMT){
+	    AST_NODE* q = p->child;//q est un identifier node
+	    //verifier le return type de la fonction
+	    char* funcName = q->semantic_value.identifierSemanticValue.identifierName;
+	    DATA_TYPE returnType;
+	    if(declaredLocally(funcName)){
+	    	returnType = retrieveSymbol(funcName)->attribute->attr.functionSignature->returnType;
+		if(returnType == INT_TYPE)
+		    return 1;
+		else return 0;
+	    }else{
+		printf("ID %s undeclared\n");
+		printf("Error found in line %d\n", q->linenumber);
+	    }
+	}
+	else{
+	    printf("uncaught statement node in checkif \n");
 	}
     }
     else{
