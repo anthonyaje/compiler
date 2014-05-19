@@ -346,23 +346,23 @@ void checkAssignmentStmt(AST_NODE* assignmentNode)
     //AJE
 //    printf("in checkAssignment\n");
 //printf("Wiii!! in checkAssignmenOrExpr()\n"); 
-    AST_NODE* p = assignmentNode->child;
+    AST_NODE* p = assignmentNode;
     //BONUS
-    processVariableLValue(p);
-    processExprRelatedNode(p->rightSibling);
+    processVariableLValue(p->child);
+    processExprRelatedNode(p->child->rightSibling);
 }
 
 
 void checkIfStmt(AST_NODE* ifNode)
 {
     //DADA
-    printf("in\n");
+    printf("in checkIfStmt\n");
     AST_NODE* p = ifNode;
     AST_NODE* q = ifNode->child;
     if(q!=NULL)
         processExprRelatedNode(q);
     p = p->rightSibling;
-    
+   printf("child is processed\n"); 
     while(p!=NULL){
         if(p->nodeType == BLOCK_NODE){
             processBlockNode(p,1);
@@ -534,10 +534,13 @@ void processExprRelatedNode(AST_NODE* exprRelatedNode)
         }else if(p->nodeType == STMT_NODE){
 	    processStmtNode(p);
 	}else if(p->nodeType == NONEMPTY_ASSIGN_EXPR_LIST_NODE){
-		checkAssignOrExpr(p->child);
+	    checkAssignOrExpr(p->child);
 	}
 	else if(p->nodeType == NONEMPTY_RELOP_EXPR_LIST_NODE){
-		processExprRelatedNode(p->child);
+	    processExprRelatedNode(p->child);
+	}
+	else if(p->nodeType == BLOCK_NODE){
+	    processBlockNode(p,1);
 	}
 	else{
 	    printf("uncaught case in processExprRelatedNode\n");
@@ -613,6 +616,7 @@ void evaluateExprValue(AST_NODE* exprNode, TypeDescriptor* outType)
 
 void processExprNode(AST_NODE* exprNode)
 {
+printf("IN processExprNode()\n");
     AST_NODE* p = exprNode->child;
     while(p!=NULL){
         if(p->nodeType == IDENTIFIER_NODE)
@@ -627,6 +631,8 @@ void processExprNode(AST_NODE* exprNode)
 
         p = p->rightSibling;
     }
+printf("EXIT processExprNode()\n");
+
 }
 
 
@@ -757,7 +763,7 @@ int traverseExpr(AST_NODE* p){
 void checkReturnStmt(AST_NODE* returnNode)
 {
     //Assume each function must "return", otherwise no error detected
-   // printf("in CheckReturnStmt()\n");
+    printf("in CheckReturnStmt()\n");
     DATA_TYPE final_type;
     AST_NODE* p = returnNode->child;
     switch(p->nodeType){
@@ -796,6 +802,7 @@ void checkReturnStmt(AST_NODE* returnNode)
           g_anyErrorOccur = 1;
 
     }  
+    printf("EXIT CheckReturnStmt()\n");
 }
 
 void processBlockNode(AST_NODE* blockNode,int OpenScope)
@@ -827,17 +834,13 @@ void processBlockNode(AST_NODE* blockNode,int OpenScope)
 }
 
 
-void processStmtf(n == 0)
-       return 0;
-    else if(n == 1)
-       q = j + 1;
-    else
-       return fib(n-1) + fib(n-2);
-Node(AST_NODE* stmtNode)
+void processStmtNode(AST_NODE* stmtNode)
 {
-//  printf("in processStmtNode\n");
+  printf("in processStmtNode\n");
   AST_NODE* p = stmtNode;
-  while(p!=NULL){ 
+  while(p!=NULL){
+    if(p->nodeType == NUL_NODE){ return; } 
+    else if(p->nodeType == BLOCK_NODE){ return; } 
     switch(p->semantic_value.stmtSemanticValue.kind){
         case RETURN_STMT:
 	        checkReturnStmt(p);	

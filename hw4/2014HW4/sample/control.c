@@ -2,6 +2,7 @@ int q;
 int main() {
 	int i;
         int p,n;
+        int k,j;
         int m;
 	for (q=0; i<9; i=i*1+1/2) {
 	}
