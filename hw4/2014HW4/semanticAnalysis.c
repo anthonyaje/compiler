@@ -336,7 +336,7 @@ void checkFunctionCall(AST_NODE* functionCallNode)
     char* name = p->semantic_value.identifierSemanticValue.identifierName;
     if(strcmp(name,"write") != 0){
 	if(declaredLocally(name) == 0){
-	    printf("ID %s undeclared",name);
+	    printf("ID %s undeclared\n",name);
 	    printf("Error found in line %d\n", p->linenumber);
         }
         checkParameterPassing(retrieveSymbol(name)->attribute->attr.functionSignature->parameterList, p->rightSibling,name);
@@ -383,7 +383,7 @@ void checkParameterPassing(Parameter* formalParameter, AST_NODE* actualParameter
 		    else
 		        type_flag = 1;
 	        }else{
-		printf("ID %s undeclared",p->semantic_value.identifierSemanticValue.identifierName);
+		printf("ID %s undeclared\n",p->semantic_value.identifierSemanticValue.identifierName);
 	        printf("Error found in line %d\n", p->linenumber);
 		    p = p->rightSibling;
 		    q = q->next;
@@ -438,7 +438,7 @@ void processExprRelatedNode(AST_NODE* exprRelatedNode)
     while(p!=NULL){
 	if(p->nodeType == IDENTIFIER_NODE){
 	    /*if(declaredLocally(p->semantic_value.identifierSemanticValue.identifierName)==0){
-		printf("ID %s undeclared",p->semantic_value.identifierSemanticValue.identifierName);
+		printf("ID %s undeclared\n",p->semantic_value.identifierSemanticValue.identifierName);
 	        printf("Error found in line %d\n", p->linenumber);
 	    }
 	    */
@@ -479,7 +479,7 @@ void getExprOrConstValue(AST_NODE* exprOrConstNode, int* iValue, float* fValue)
 
 	}else if(p->nodeType == IDENTIFIER_NODE){
 	    if(declaredLocally(p->semantic_value.identifierSemanticValue.identifierName)==0){
-		printf("ID %s undeclared",p->semantic_value.identifierSemanticValue.identifierName);	
+		printf("ID %s undeclared\n",p->semantic_value.identifierSemanticValue.identifierName);	
 		printf("Error found in line %d\n", p->linenumber);
             }else if(p->dataType != INT_TYPE){
 		printf("拍謝.. only integer\n");
@@ -532,7 +532,7 @@ void processVariableLValue(AST_NODE* idNode)
     //BONUS
     char* name = (idNode->semantic_value.identifierSemanticValue.identifierName);
     if(declaredLocally(name) == 0){
- 	printf("ID %s undeclared",name);
+ 	printf("ID %s undeclared\n",name);
 	printf("Error found in line %d\n", idNode->linenumber);
 	return;
     }
@@ -619,7 +619,7 @@ int traverseExpr(AST_NODE* p){
 
 void checkReturnStmt(AST_NODE* returnNode)
 {
-    printf("in CheckRetrurnStmt()\n");
+    printf("in CheckReturnStmt()\n");
     DATA_TYPE final_type;
     AST_NODE* p = returnNode->child;
     switch(p->nodeType){
