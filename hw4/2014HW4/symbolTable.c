@@ -33,13 +33,13 @@ SymbolTableEntry* newSymbolTableEntry(int nestingLevel)
 
 void removeFromHashTrain(int hashIndex, SymbolTableEntry* entry)
 {
-    printf("IN removefromhash\n");
+  //  printf("IN removefromhash\n");
     if(entry == NULL){
-	printf("Warning: try to remove NULL entry\n");
+//	printf("Warning: try to remove NULL entry\n");
 	return;
     } 
     if(entry->nextInHashChain != NULL){
-	printf("IN removefromhash first if\n");
+//	printf("IN removefromhash first if\n");
 	if(entry->prevInHashChain != NULL)
 		entry->prevInHashChain->nextInHashChain = entry->nextInHashChain;
 	else
@@ -51,7 +51,7 @@ void removeFromHashTrain(int hashIndex, SymbolTableEntry* entry)
 	entry->prevInHashChain = NULL;
    } 
    else{
-	printf("IN removefromhash second if\n");
+//	printf("IN removefromhash second if\n");
 	if(entry->prevInHashChain != NULL)
 		entry->prevInHashChain->nextInHashChain = NULL;
 	else
@@ -61,15 +61,15 @@ void removeFromHashTrain(int hashIndex, SymbolTableEntry* entry)
 	
    }
 
-    printf("OUT removefromhash\n");
+  //  printf("OUT removefromhash\n");
 }
 
 void enterIntoHashTrain(int hashIndex, SymbolTableEntry* entry)
 {
-	printf("IN enterIntoHashTrain\n");
+//	printf("IN enterIntoHashTrain\n");
 	entry->nextInHashChain = symbolTable.hashTable[hashIndex];
 	symbolTable.hashTable[hashIndex] = entry;
-    printf("OUT enterIntoHashTrain\n");
+  //  printf("OUT enterIntoHashTrain\n");
 }
 
 void initializeSymbolTable()
@@ -105,7 +105,7 @@ SymbolTableEntry* retrieveSymbol(char* symbolName)
 
 SymbolTableEntry* enterSymbol(char* symbolName, SymbolAttribute* attribute)
 {
-	printf("START: enterSymbol\n");
+//	printf("START: enterSymbol\n");
 	//int i=0;
 	//printf("i: %d\n",i++);
 	SymbolTableEntry* entry = newSymbolTableEntry(symbolTable.currentLevel);
@@ -115,7 +115,7 @@ SymbolTableEntry* enterSymbol(char* symbolName, SymbolAttribute* attribute)
     SymbolTableEntry* old_symbol = retrieveSymbol(entry->name);
 	//printf("i:  %d\n",i++);
     if((old_symbol != NULL)&&(old_symbol->nestingLevel == entry->nestingLevel)){
-	       printf("ID %s redeclared.\n");
+	      // printf("ID %s redeclared.\n");
  	}
 	if(old_symbol == NULL){
 		enterIntoHashTrain(HASH(entry->name),entry);
@@ -128,13 +128,13 @@ SymbolTableEntry* enterSymbol(char* symbolName, SymbolAttribute* attribute)
 	//scope pointer
  	entry->nextInSameLevel = symbolTable.scopeDisplay[entry->nestingLevel]; 
 	symbolTable.scopeDisplay[entry->nestingLevel] = entry;
-	printf("CLOSE: enterSymbol\n");
+//	printf("CLOSE: enterSymbol\n");
 }
 
 //remove the symbol from the current scope
 void removeSymbol(char* symbolName)
 {
-     printf("START: removeSymbol\n");
+    // printf("START: removeSymbol\n");
 	 SymbolTableEntry* old_symbol = retrieveSymbol(symbolName);
         if((old_symbol != NULL) && (old_symbol->nestingLevel == symbolTable.currentLevel)){
 			removeFromHashTrain(HASH(old_symbol->name),old_symbol);
@@ -142,7 +142,7 @@ void removeSymbol(char* symbolName)
 	else{
 	   printf("ID %s not found.\n",symbolName);
 	}
-	printf("CLOSE: removeSymbol\n");	
+//	printf("CLOSE: removeSymbol\n");	
 }
 
 int declaredLocally(char* symbolName)
@@ -166,7 +166,7 @@ void minusScope(){
 
 void openScope()
 {
-  printf("START: Scope %d opened\n",symbolTable.currentLevel+1);
+ // printf("START: Scope %d opened\n",symbolTable.currentLevel+1);
   int i = symbolTable.currentLevel;
   symbolTable.currentLevel++;
   symbolTable.scopeDisplay[i] = NULL;
@@ -179,23 +179,23 @@ void openScope()
 
 void closeScope()
 {
-   printf("START: closeScope\n");
+  // printf("START: closeScope\n");
    SymbolTableEntry* p = symbolTable.scopeDisplay[symbolTable.currentLevel];
    while(p != NULL){ 
       SymbolTableEntry* next_node  = p->nextInSameLevel;
       SymbolTableEntry* prev_sym  = p->sameNameInOuterLevel;
       removeSymbol(p->name);
-	  printf("After removeSymbol\n");
+//	  printf("After removeSymbol\n");
 	  if(prev_sym!=NULL){
 		 enterIntoHashTrain(HASH(prev_sym->name),prev_sym);
-		 printf("Prev_sym is not NULL\n");
+//		 printf("Prev_sym is not NULL\n");
 	  }
 	  else{
-			printf("Prev_sym is NULL\n");
+//			printf("Prev_sym is NULL\n");
 	  }
 	  p = next_node;
    }
    symbolTable.scopeDisplay[symbolTable.currentLevel] = NULL;
    symbolTable.currentLevel--;
-   printf("Scope %d closed\n",symbolTable.currentLevel+1);
+  // printf("Scope %d closed\n",symbolTable.currentLevel+1);
 }
