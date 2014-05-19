@@ -137,8 +137,7 @@ void removeSymbol(char* symbolName)
      printf("START: removeSymbol\n");
 	 SymbolTableEntry* old_symbol = retrieveSymbol(symbolName);
         if((old_symbol != NULL) && (old_symbol->nestingLevel == symbolTable.currentLevel)){
-	   removeFromHashTrain(HASH(old_symbol->name),old_symbol);
-	   //free(old_symbol);
+			removeFromHashTrain(HASH(old_symbol->name),old_symbol);
  	}
 	else{
 	   printf("ID %s not found.\n",symbolName);
@@ -176,17 +175,6 @@ void closeScope()
    while(p != NULL){ 
       SymbolTableEntry* next_node  = p->nextInSameLevel;
       SymbolTableEntry* prev_sym  = p->sameNameInOuterLevel;
-/*<<<<<<< HEAD
-      //free(p);
-        printf("BEFORE REMOVING!!\n");
-      removeSymbol(p->name);
-	printf("SUCCESSFULLY REMOVED!!!\n");
-      p = next_node;
-      enterIntoHashTrain(HASH(prev_sym->name),prev_sym);
-   }
-   symbolTable.scopeDisplay[symbolTable.currentLevel] = NULL;
-   symbolTable.currentLevel--;
-=======*/
       removeSymbol(p->name);
 	  printf("After removeSymbol\n");
 	  if(prev_sym!=NULL){
@@ -201,5 +189,4 @@ void closeScope()
    symbolTable.scopeDisplay[symbolTable.currentLevel] = NULL;
    symbolTable.currentLevel--;
    printf("Scope %d closed\n",symbolTable.currentLevel+1);
-//>>>>>>> 0856867a8f5e324017713fcfd3b914ff6f512912
 }
