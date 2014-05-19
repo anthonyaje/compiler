@@ -16,7 +16,7 @@ void declareIdList(AST_NODE* typeNode, SymbolAttributeKind isVariableOrTypeAttri
 void declareFunction(AST_NODE* returnTypeNode);
 void processDeclDimList(AST_NODE* variableDeclDimList, TypeDescriptor* typeDescriptor, int ignoreFirstDimSize);
 void processTypeNode(AST_NODE* typeNode);
-void processBlockNode(AST_NODE* blockNode);
+void processBlockNode(AST_NODE* blockNode,int OpenScope);
 void processStmtNode(AST_NODE* stmtNode);
 void processGeneralNode(AST_NODE *node);
 void checkAssignOrExpr(AST_NODE* assignOrExprRelatedNode);
@@ -294,7 +294,7 @@ void checkWhileStmt(AST_NODE* whileNode)
     //evaluateExprValue(p);
     checkAssignOrExpr(p);
     p = p->rightSibling;
-    processBlockNode(p); 
+    processBlockNode(p,1); 
 }
 
 
@@ -309,7 +309,7 @@ void checkForStmt(AST_NODE* forNode)
     processGeneralNode(p);
 
     p = p->rightSibling;
-    processBlockNode(p); 
+    processBlockNode(p,1); 
 }
 
 
@@ -334,7 +334,7 @@ void checkIfStmt(AST_NODE* ifNode)
     //DADA
     while(p!=NULL){
         if(p->nodeType == BLOCK_NODE){
-            processBlockNode(p);
+            processBlockNode(p,1);
         }
 	else if(p->nodeType == STMT_NODE){
 	    processStmtNode(p);
@@ -480,7 +480,12 @@ void processExprRelatedNode(AST_NODE* exprRelatedNode)
 	}
         else if(p->nodeType == EXPR_NODE){
 	    processExprNode(p);
-        }
+        }else if(p->nodeType == STMT_NODE){
+	    processStmtNode(p);
+	}
+	else{
+	    printf("uncaught case in processExprNode\n");
+	}
 
         p = p->rightSibling;
     }
@@ -714,10 +719,11 @@ void checkReturnStmt(AST_NODE* returnNode)
     }  
 }
 
-void processBlockNode(AST_NODE* blockNode)
+void processBlockNode(AST_NODE* blockNode,int OpenScope)
 {
     printf("in processBlockNode\n");
-    openScope();
+    if(OpenScope)
+    	openScope();
     AST_NODE* p = blockNode->child;
     while(p != NULL ){
        switch(p->nodeType){
@@ -837,13 +843,13 @@ void declareFunction(AST_NODE* declarationNode)
 
     p = p->rightSibling;
     AST_NODE* p_to_block = p;
-    
+    openScope();
     if(p->child != NULL){//if the function has at least one parameter
 	p = p->child;
 	Parameter* para_this = NULL; 
 	//para_this = (Parameter*) malloc(sizeof(Parameter)); 	    
 	while(p!=NULL){//while there is an unvisited parameter
-           AST_NODE* q = p->child;
+           AST_NODE* q = p->child;//q is the type name
 	   functionSig->parametersCount++;
 
        	   TypeDescriptor* type_desc = (TypeDescriptor*) malloc(sizeof(TypeDescriptor));
@@ -871,8 +877,12 @@ void declareFunction(AST_NODE* declarationNode)
 		para_this->next = NULL;
 	   }
 	    para_this->type=type_desc;
-	    functionSig->parameterList->parameterName = q->semantic_value.identifierSemanticValue.identifierName;	    
-	    
+	    //DADA
+	    para_this->parameterName = q->rightSibling->semantic_value.identifierSemanticValue.identifierName;	    
+	    SymbolAttribute* param_attr = (SymbolAttribute*)malloc(sizeof(SymbolAttribute));
+	    param_attr->attributeKind = VARIABLE_ATTRIBUTE;
+	    param_attr->attr.typeDescriptor = type_desc;
+	    enterSymbol(para_this->parameterName,param_attr);
 	    p = p->rightSibling;
         }
     }
@@ -880,7 +890,9 @@ void declareFunction(AST_NODE* declarationNode)
     SymbolAttribute* symbol_att = (SymbolAttribute*) malloc(sizeof(SymbolAttribute));
     symbol_att->attributeKind = FUNCTION_SIGNATURE;
     symbol_att->attr.functionSignature = functionSig;
+    minusScope();
     enterSymbol(function_name,symbol_att);
+    plusScope();
     printf("calling processBlockNode\n");
-    processBlockNode(p_to_block->rightSibling);
+    processBlockNode(p_to_block->rightSibling,0);
 }

@@ -156,6 +156,14 @@ int declaredLocally(char* symbolName)
  	}
 }
 
+//DADA MAGIC
+void plusScope(){
+	symbolTable.currentLevel++;
+}
+void minusScope(){
+	symbolTable.currentLevel--;
+}
+
 void openScope()
 {
   printf("START: Scope %d opened\n",symbolTable.currentLevel+1);
