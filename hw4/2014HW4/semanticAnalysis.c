@@ -4,7 +4,11 @@
 #include "header.h"
 #include "symbolTable.h"
 // This file is for reference only, you are not required to follow the implementation. //
-// You only need to check for errors stated in the hw4 document. //
+// Yo
+//u only need to check for errors stated in the hw4 document. //
+//Assume write() is C-- buit-in function. read() is not.
+//Assume write() can accept string float int
+//
 int g_anyErrorOccur = 0;
 
 DATA_TYPE f_global_return_type;
@@ -369,6 +373,7 @@ void checkIfStmt(AST_NODE* ifNode)
         }
 	else if(p->nodeType == STMT_NODE){
 	    processStmtNode(p);
+	    break;
 	}
 	else{
 	    printf("Uncaught checkif case\n");
@@ -533,6 +538,7 @@ void processExprRelatedNode(AST_NODE* exprRelatedNode)
 	    processExprNode(p);
         }else if(p->nodeType == STMT_NODE){
 	    processStmtNode(p);
+	    break;
 	}else if(p->nodeType == NONEMPTY_ASSIGN_EXPR_LIST_NODE){
 	    checkAssignOrExpr(p->child);
 	}
@@ -542,7 +548,11 @@ void processExprRelatedNode(AST_NODE* exprRelatedNode)
 	else if(p->nodeType == BLOCK_NODE){
 	    processBlockNode(p,1);
 	}
+	else if(p->nodeType == NUL_NODE){
+	    return;
+        }
 	else{
+	    printf("my type %d",p->nodeType);
 	    printf("uncaught case in processExprRelatedNode\n");
           g_anyErrorOccur = 1;
 
@@ -741,7 +751,7 @@ int traverseExpr(AST_NODE* p){
 		    return 1;
 		else return 0;
 	    }else{
-		printf("ID %s undeclared\n");
+		printf("ID %s undeclared\n",funcName);
 		printf("Error found in line %d\n", q->linenumber);
 	          g_anyErrorOccur = 1;
 
