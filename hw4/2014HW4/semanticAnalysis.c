@@ -658,7 +658,7 @@ void checkReturnStmt(AST_NODE* returnNode)
 void processBlockNode(AST_NODE* blockNode)
 {
     printf("in processBlockNode\n");
-    
+    openScope();
     AST_NODE* p = blockNode->child;
     while(p != NULL ){
        switch(p->nodeType){
@@ -677,6 +677,7 @@ void processBlockNode(AST_NODE* blockNode)
       }
        p = p->rightSibling;
     }
+    closeScope();
 }
 
 
