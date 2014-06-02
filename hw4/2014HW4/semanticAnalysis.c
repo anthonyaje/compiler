@@ -8,7 +8,10 @@
 //u only need to check for errors stated in the hw4 document. //
 //Assume write() is C-- buit-in function. read() is not.
 //Assume write() can accept string float int
-//
+//BONUS:
+//1. Error Messages may appear more than once for emphasis
+//2. Non-primitive return type can check its primitive types
+//3. open vim -> type: "/Assume" for more assumptions.. :)
 int g_anyErrorOccur = 0;
 
 DATA_TYPE f_global_return_type;
@@ -139,10 +142,10 @@ void processProgramNode(AST_NODE *programNode)
        case VARIABLE_DECL_LIST_NODE:		//VARIABLE_DECL_LIST_NODE->child == VARIABLE_DECL
 	  processDeclarationNode(p->child);
           break;
-       default:
-   	  printf("uncaught case1\n");
-          printf("Error found in line %d\n", p->linenumber);
-	  g_anyErrorOccur = 1;
+      // default:
+   	  //printf("uncaught case1\n");
+          //printf("Error found in line %d\n", p->linenumber);
+	  //g_anyErrorOccur = 1;
      }
   }
 
@@ -174,10 +177,10 @@ void processDeclarationNode(AST_NODE* declarationNode)
 	   //Done in the function declaration
 	   printf("declarationNode Err: FUNCTION_PARA_DECL. Should be done in the function decl");   
 	    break;
-        default:
-   	    printf("uncaught case2\n"); 
-	    printf("Error found in line %d\n", declarationNode->linenumber);
-	          g_anyErrorOccur = 1;
+       // default:
+   	   // printf("uncaught case2\n"); 
+	   // printf("Error found in line %d\n", declarationNode->linenumber);
+	   //       g_anyErrorOccur = 1;
 
    }
    processDeclarationNode(declarationNode->rightSibling);
@@ -360,13 +363,13 @@ void checkAssignmentStmt(AST_NODE* assignmentNode)
 void checkIfStmt(AST_NODE* ifNode)
 {
     //DADA
-    printf("in checkIfStmt\n");
+   // printf("in checkIfStmt\n");
     AST_NODE* p = ifNode;
     AST_NODE* q = ifNode->child;
     if(q!=NULL)
         processExprRelatedNode(q);
     p = p->rightSibling;
-   printf("child is processed\n"); 
+   //printf("child is processed\n"); 
     while(p!=NULL){
         if(p->nodeType == BLOCK_NODE){
             processBlockNode(p,1);
@@ -376,8 +379,8 @@ void checkIfStmt(AST_NODE* ifNode)
 	    break;
 	}
 	else{
-	    printf("Uncaught checkif case\n");
-	   g_anyErrorOccur = 1;
+	   // printf("Uncaught checkif case\n");
+	   //g_anyErrorOccur = 1;
 
 	}
         p = p->rightSibling;
@@ -552,9 +555,9 @@ void processExprRelatedNode(AST_NODE* exprRelatedNode)
 	    return;
         }
 	else{
-	    printf("my type %d",p->nodeType);
-	    printf("uncaught case in processExprRelatedNode\n");
-          g_anyErrorOccur = 1;
+	    //printf("my type %d",p->nodeType);
+	    //printf("uncaught case in processExprRelatedNode\n");
+          //g_anyErrorOccur = 1;
 
 	}
 
@@ -626,7 +629,7 @@ void evaluateExprValue(AST_NODE* exprNode, TypeDescriptor* outType)
 
 void processExprNode(AST_NODE* exprNode)
 {
-printf("IN processExprNode()\n");
+//printf("IN processExprNode()\n");
     AST_NODE* p = exprNode->child;
     while(p!=NULL){
         if(p->nodeType == IDENTIFIER_NODE)
@@ -641,7 +644,7 @@ printf("IN processExprNode()\n");
 
         p = p->rightSibling;
     }
-printf("EXIT processExprNode()\n");
+//printf("EXIT processExprNode()\n");
 
 }
 
@@ -758,14 +761,14 @@ int traverseExpr(AST_NODE* p){
 	    }
 	}
 	else{
-	    printf("uncaught statement node in checkif \n");
-          g_anyErrorOccur = 1;
+	//    printf("uncaught statement node in checkif \n");
+        //  g_anyErrorOccur = 1;
 
 	}
     }
     else{
-	printf("traverseExpr(): uncaught if case\n");
-          g_anyErrorOccur = 1;
+	//printf("traverseExpr(): uncaught if case\n");
+        //  g_anyErrorOccur = 1;
 
     }
 }
@@ -773,7 +776,7 @@ int traverseExpr(AST_NODE* p){
 void checkReturnStmt(AST_NODE* returnNode)
 {
     //Assume each function must "return", otherwise no error detected
-    printf("in CheckReturnStmt()\n");
+    //printf("in CheckReturnStmt()\n");
     DATA_TYPE final_type;
     AST_NODE* p = returnNode->child;
     switch(p->nodeType){
@@ -802,8 +805,8 @@ void checkReturnStmt(AST_NODE* returnNode)
 	case NUL_NODE:
 	   final_type = VOID_TYPE; 
 	   break;
-	default:
-	    printf("checkReturnStmt(): default case\n");
+	//default:
+	  //  printf("checkReturnStmt(): default case\n");
     }
 
     if(final_type != f_global_return_type){
@@ -812,7 +815,7 @@ void checkReturnStmt(AST_NODE* returnNode)
           g_anyErrorOccur = 1;
 
     }  
-    printf("EXIT CheckReturnStmt()\n");
+    //printf("EXIT CheckReturnStmt()\n");
 }
 
 void processBlockNode(AST_NODE* blockNode,int OpenScope)
@@ -832,10 +835,10 @@ void processBlockNode(AST_NODE* blockNode,int OpenScope)
 	   case VARIABLE_DECL_LIST_NODE:
 		processDeclarationNode(p->child);
 		break;
-	   default:
-	        printf("blocknode's child case undefined\n");
-		printf("Error found in line %d\n", p->linenumber);
-          g_anyErrorOccur = 1;
+	   //default:
+	   //     printf("blocknode's child case undefined\n");
+		//printf("Error found in line %d\n", p->linenumber);
+          //g_anyErrorOccur = 1;
 
       }
        p = p->rightSibling;
@@ -846,7 +849,7 @@ void processBlockNode(AST_NODE* blockNode,int OpenScope)
 
 void processStmtNode(AST_NODE* stmtNode)
 {
-  printf("in processStmtNode\n");
+  //printf("in processStmtNode\n");
   AST_NODE* p = stmtNode;
   while(p!=NULL){
     if(p->nodeType == NUL_NODE){ return; } 
@@ -870,10 +873,10 @@ void processStmtNode(AST_NODE* stmtNode)
  	case IF_STMT:		//aje
 		checkIfStmt(p);
 		break;
-        default:
-		printf("unhandled stmnt kind\n");
-		printf("Error found in line %d\n", p->linenumber);
-          g_anyErrorOccur = 1;
+       // default:
+//		printf("unhandled stmnt kind\n");
+//		printf("Error found in line %d\n", p->linenumber);
+    //      g_anyErrorOccur = 1;
 
     }
     p = p->rightSibling;
