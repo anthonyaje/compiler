@@ -20,14 +20,14 @@ void checkWhileStmt(AST_NODE* whileNode);
 void checkForStmt(AST_NODE* forNode);
 int checkAssignmentStmt(AST_NODE* assignmentNode);
 void checkIfStmt(AST_NODE* ifNode);
-int checkWriteFunction(AST_NODE* functionCallNode);
+void checkWriteFunction(AST_NODE* functionCallNode);
 void checkReadFunction(AST_NODE* functionCallNode);
 void checkFunctionCall(AST_NODE* functionCallNode);
-void processExprRelatedNode(AST_NODE* exprRelatedNode);
+int processExprRelatedNode(AST_NODE* exprRelatedNode);
 void checkParameterPassing(Parameter* formalParameter, AST_NODE* actualParameter);
 void checkReturnStmt(AST_NODE* returnNode);
-void processExprNode(AST_NODE* exprNode);
-void processVariableLValue(AST_NODE* idNode);
+int processExprNode(AST_NODE* exprNode);
+int processVariableLValue(AST_NODE* idNode);
 //void processVariableRValue(AST_NODE* idNode);
 int processVariableRValue(AST_NODE* idNode);
 int processConstValueNode(AST_NODE* constValueNode);
@@ -49,7 +49,7 @@ int else_num = 0;
 int exit_num = 0;
 int while_num = 0;
 int while_exit_num = 0;
-
+int m_num=0;
 
 int getreg(){
    int i=4;
@@ -65,7 +65,9 @@ int getreg(){
 }
 
 void free_reg(int i){
-   reg[i] = 0;
+   if(i>=26 || i<4)
+	 printf("Try to free unavailable register\n");
+   else reg[i] = 0;
 }
 
 
@@ -144,34 +146,29 @@ _end_%s:\n\
 	lw	$13,12($sp)\n\
 	lw	$14,8($sp)\n\
 	lw	$15,4($sp)\
-\n	sw	$16,52($sp)\
-\n	sw	$17,56($sp)\
-\n	sw	$18,60($sp)\
-\n	sw	$19,64($sp)\
-\n	sw	$20,68($sp)\
-\n	sw	$21,72($sp)\
-\n	sw	$22,76($sp)\
-\n	sw	$23,80($sp)\
-\n	sw	$24,84($sp)\
-\n	sw	$25,88($sp)\
-\n	sw	$4,48($sp)\
-\n	sw	$5,44($sp)\
-\n	sw	$6,40($sp)\
-\n	sw	$7,36($sp)\n\
+\n	lw	$16,52($sp)\
+\n	lw	$17,56($sp)\
+\n	lw	$18,60($sp)\
+\n	lw	$19,64($sp)\
+\n	lw	$20,68($sp)\
+\n	lw	$21,72($sp)\
+\n	lw	$22,76($sp)\
+\n	lw	$23,80($sp)\
+\n	lw	$24,84($sp)\
+\n	lw	$25,88($sp)\
+\n	lw	$4,48($sp)\
+\n	lw	$5,44($sp)\
+\n	lw	$6,40($sp)\
+\n	lw	$7,36($sp)\n\
 	lw	$ra, 4($fp)\n\
-	add	$sp, $fp, 4\n\ 
-	lw	$fp, 0($fp)\n\ 
+	add	$sp, $fp, 4\n\
+	lw	$fp, 0($fp)\n\
 	jr	$ra\n\
 .data \n\
 _framesize_of_%s: .word %d\n\
 .data\n\
 .text\n\
      ",label,label,frame_size);
-}
-
-int getreg(){
-
-
 }
 
 void printErrorMsgSpecial(AST_NODE* node1, char* name2, ErrorMsgKind errorMsgKind)
@@ -519,7 +516,7 @@ void declareIdList(AST_NODE* declarationNode, SymbolAttributeKind isVariableOrTy
     }
 }
 
-int checkAssignOrExpr(AST_NODE* assignOrExpreelatedNode)
+int checkAssignOrExpr(AST_NODE* assignOrExprRelatedNode)
 {
     if(assignOrExprRelatedNode->nodeType == STMT_NODE)
     {
@@ -531,7 +528,7 @@ int checkAssignOrExpr(AST_NODE* assignOrExpreelatedNode)
         {
             int i = getreg();
             checkFunctionCall(assignOrExprRelatedNode);
-            fprintf("move $%d, $v0\n",i);
+            fprintf(asm_out,"move $%d, $v0\n",i);
 	    return i;
         }
     }
@@ -544,7 +541,7 @@ int checkAssignOrExpr(AST_NODE* assignOrExpreelatedNode)
 void checkWhileStmt(AST_NODE* whileNode)
 {
     int w_num, w_exit;
-    w_num = ++while__num;
+    w_num = ++while_num;
     w_exit = ++while_exit_num;
     AST_NODE* boolExpression = whileNode->child;
     fprintf(asm_out,"_while%d:\n",w_num);	
@@ -580,7 +577,7 @@ int checkAssignmentStmt(AST_NODE* assignmentNode)
     int r2 = processExprRelatedNode(rightOp);
     
     if(r1 == -2){ //global variable
-	symbolTableEntry *symbolTableEntry = retrieveSymbol(leftOp->semantic_value.identifierSemanticValue.identifierName);
+	SymbolTableEntry *symbolTableEntry = retrieveSymbol(leftOp->semantic_value.identifierSemanticValue.identifierName);
 	fprintf(asm_out,"move $_%s, $%d\n",symbolTableEntry->name,r2);		
     }
     else if(r1 != -1) //assume local variable
@@ -621,15 +618,15 @@ void checkIfStmt(AST_NODE* ifNode)
     fprintf(asm_out,"_if%d:\n",local_if);	
     AST_NODE* boolExpression = ifNode->child;
     int reg_num = checkAssignOrExpr(boolExpression);
+    free_reg(reg_num);	
     fprintf(asm_out,"beqz $%d, _else%d\n",reg_num,local_else);	
     AST_NODE* ifBodyNode = boolExpression->rightSibling;
     processStmtNode(ifBodyNode);
-    processStmtNode(elsePartNode);
     fprintf(asm_out,"j _exit%d\n",local_exit);	
     fprintf(asm_out,"_else%d:\n",local_else);	
     AST_NODE* elsePartNode = ifBodyNode->rightSibling;
     processStmtNode(elsePartNode);
-    fprintf(asm_out,"_exit%d:\n",local_exit);	
+    fprintf(asm_out,"_exit%d:\n",local_exit);
 }
 
 void checkWriteFunction(AST_NODE* functionCallNode)
@@ -668,8 +665,11 @@ void checkWriteFunction(AST_NODE* functionCallNode)
 		fprintf(asm_out,"_m%d: .word %d\n",++m_num,actualParameter->semantic_value.const1->const_u.fval);
 		break;
 	    case CONST_STRING_TYPE:
-		fprintf(asm_out,".data");
+		fprintf(asm_out,".data\n");
 		fprintf(asm_out,"_m%d: .asciiz \"%s\"\n",++m_num,actualParameter->semantic_value.const1->const_u.sc);
+		fprintf(asm_out,"li $v0, 4\n");
+		fprintf(asm_out,"la $a0, _m%d\n",m_num);
+		fprintf(asm_out,"syscall\n");
 		break;
 	}
         actualParameter = actualParameter->rightSibling;
@@ -807,6 +807,7 @@ void checkParameterPassing(Parameter* formalParameter, AST_NODE* actualParameter
 
 int processExprRelatedNode(AST_NODE* exprRelatedNode)
 {
+int i;
     switch(exprRelatedNode->nodeType)
     {
     case EXPR_NODE:
@@ -814,9 +815,9 @@ int processExprRelatedNode(AST_NODE* exprRelatedNode)
         break;
     case STMT_NODE:
         //function call
-        int i = getreg();
+        i = getreg();
         checkFunctionCall(exprRelatedNode);
-        fprintf("move $%d, $v0\n",i);
+        fprintf(asm_out,"move $%d, $v0\n",i);
 	return i;
 	break;
     case IDENTIFIER_NODE:
@@ -1158,8 +1159,6 @@ int processExprNode(AST_NODE* exprNode)
         {
             exprNode->dataType = operand->dataType;
         }
-
-        
         if((exprNode->dataType != ERROR_TYPE) &&
            (operand->nodeType == CONST_VALUE_NODE || (operand->nodeType == EXPR_NODE && operand->semantic_value.exprSemanticValue.isConstEval))
           )
@@ -1176,9 +1175,8 @@ int processExprNode(AST_NODE* exprNode)
 int processVariableLValue(AST_NODE* idNode)
 {
     SymbolTableEntry *symbolTableEntry = retrieveSymbol(idNode->semantic_value.identifierSemanticValue.identifierName);
-    int offset = symbolTableEntry->attribute.offset;
+    int offset = symbolTableEntry->attribute->offset;
   
-    TypeDescriptor *typeDescriptor = idNode->semantic_value.identifierSemanticValue.symbolTableEntry->attribute->attr.typeDescriptor;
     if(!symbolTableEntry)
     {
         printErrorMsg(idNode, SYMBOL_UNDECLARED);
@@ -1199,6 +1197,8 @@ int processVariableLValue(AST_NODE* idNode)
         idNode->dataType = ERROR_TYPE;
         return -1;
     }
+
+    TypeDescriptor *typeDescriptor = idNode->semantic_value.identifierSemanticValue.symbolTableEntry->attribute->attr.typeDescriptor;
     
     int reg_offset = getreg();
     if(symbolTableEntry->nestingLevel == 0){
@@ -1335,7 +1335,7 @@ int processVariableRValue(AST_NODE* idNode)
             while(traverseDimList)
             {
                 ++dimension;
-                processExprRelatedNode(traverseDimList);
+                free_reg(processExprRelatedNode(traverseDimList));
                 if(traverseDimList->dataType == ERROR_TYPE)
                 {
                     idNode->dataType = ERROR_TYPE;
@@ -1396,7 +1396,7 @@ int processConstValueNode(AST_NODE* constValueNode)
         constValueNode->dataType = FLOAT_TYPE;
         constValueNode->semantic_value.exprSemanticValue.constEvalValue.fValue =
             constValueNode->semantic_value.const1->const_u.fval;
-        fprintf(asm_out,"li $%d, %d\n",reg_num,constValueNode->semantic_value.const1->const_u.fval);
+        fprintf(asm_out,"li $%d, %f\n",reg_num,constValueNode->semantic_value.const1->const_u.fval);
 		break;
 	case STRINGC:
         constValueNode->dataType = CONST_STRING_TYPE;
@@ -1481,6 +1481,7 @@ void processBlockNode(AST_NODE* blockNode)
 
 void processStmtNode(AST_NODE* stmtNode)
 {
+    int reg_num;
     if(stmtNode->nodeType == NUL_NODE)
     {
         return;
@@ -1500,7 +1501,7 @@ void processStmtNode(AST_NODE* stmtNode)
             checkForStmt(stmtNode);
             break;
         case ASSIGN_STMT:
-            int reg_num = checkAssignmentStmt(stmtNode);
+            reg_num = checkAssignmentStmt(stmtNode);
 	    free_reg(reg_num);
             break;
         case IF_STMT:
@@ -1552,7 +1553,8 @@ void processGeneralNode(AST_NODE *node)
     case NONEMPTY_ASSIGN_EXPR_LIST_NODE:
         while(traverseChildren)
         {
-            checkAssignOrExpr(traverseChildren);
+            int it = checkAssignOrExpr(traverseChildren);
+	    free_reg(it);
             if(traverseChildren->dataType == ERROR_TYPE)
             {
                 node->dataType = ERROR_TYPE;
@@ -1563,7 +1565,7 @@ void processGeneralNode(AST_NODE *node)
     case NONEMPTY_RELOP_EXPR_LIST_NODE:
         while(traverseChildren)
         {
-            processExprRelatedNode(traverseChildren);
+            free_reg(processExprRelatedNode(traverseChildren));
             if(traverseChildren->dataType == ERROR_TYPE)
             {
                 node->dataType = ERROR_TYPE;
@@ -1601,7 +1603,8 @@ void processDeclDimList(AST_NODE* idNode, TypeDescriptor* typeDescriptor, int ig
             break;
         }
 
-        processExprRelatedNode(traverseDim);
+        free_reg(processExprRelatedNode(traverseDim));
+	
         if(traverseDim->dataType == ERROR_TYPE)
         {
             idNode->dataType = ERROR_TYPE;
