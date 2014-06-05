@@ -560,18 +560,22 @@ int checkAssignmentStmt(AST_NODE* assignmentNode)
 
 void checkIfStmt(AST_NODE* ifNode)
 {
-    fprintf(asm_out,"_if%d:\n",++if_num);	
+    int local_if,local_else,local_exit;
+    local_if = ++if_num;
+    local_else = ++else_num;
+    local_exit = ++exit_num;
+    fprintf(asm_out,"_if%d:\n",local_if);	
     AST_NODE* boolExpression = ifNode->child;
     int reg_num = checkAssignOrExpr(boolExpression);
-    fprintf(asm_out,"beqz $%d, _else%d\n",reg_num,++else_num);	
+    fprintf(asm_out,"beqz $%d, _else%d\n",reg_num,local_else);	
     AST_NODE* ifBodyNode = boolExpression->rightSibling;
     processStmtNode(ifBodyNode);
     processStmtNode(elsePartNode);
-    fprintf(asm_out,"j _exit%d\n",++exit_num);	
-    fprintf(asm_out,"_else%d:\n",else_num);	
+    fprintf(asm_out,"j _exit%d\n",local_exit);	
+    fprintf(asm_out,"_else%d:\n",local_else);	
     AST_NODE* elsePartNode = ifBodyNode->rightSibling;
     processStmtNode(elsePartNode);
-    fprintf(asm_out,"_exit%d:\n",exit_num);	
+    fprintf(asm_out,"_exit%d:\n",local_exit);	
 }
 
 void checkWriteFunction(AST_NODE* functionCallNode)
