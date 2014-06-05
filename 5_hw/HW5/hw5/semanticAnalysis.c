@@ -86,6 +86,10 @@ void write_prolog(char* label){
 \n	add	$sp, $sp, -8\
 \n	lw	$2, _framesize_of_%s\
 \n	sub	$sp,$sp,$2\
+\n	sw	$4,48($sp)\
+\n	sw	$5,44($sp)\
+\n	sw	$6,40($sp)\
+\n	sw	$7,36($sp)\
 \n	sw	$8,32($sp)\
 \n	sw	$9,28($sp)\
 \n	sw	$10,24($sp)\
@@ -94,6 +98,16 @@ void write_prolog(char* label){
 \n	sw	$13,12($sp)\
 \n	sw	$14,8($sp)\
 \n	sw	$15,4($sp)\
+\n	sw	$16,52($sp)\
+\n	sw	$17,56($sp)\
+\n	sw	$18,60($sp)\
+\n	sw	$19,64($sp)\
+\n	sw	$20,68($sp)\
+\n	sw	$21,72($sp)\
+\n	sw	$22,76($sp)\
+\n	sw	$23,80($sp)\
+\n	sw	$24,84($sp)\
+\n	sw	$25,88($sp)\
      \n",label,label);
 
 }
@@ -109,7 +123,21 @@ _end_%s:\n\
 	lw	$12,16($sp)\n\
 	lw	$13,12($sp)\n\
 	lw	$14,8($sp)\n\
-	lw	$15,4($sp)\n\
+	lw	$15,4($sp)\
+\n	sw	$16,52($sp)\
+\n	sw	$17,56($sp)\
+\n	sw	$18,60($sp)\
+\n	sw	$19,64($sp)\
+\n	sw	$20,68($sp)\
+\n	sw	$21,72($sp)\
+\n	sw	$22,76($sp)\
+\n	sw	$23,80($sp)\
+\n	sw	$24,84($sp)\
+\n	sw	$25,88($sp)\
+\n	sw	$4,48($sp)\
+\n	sw	$5,44($sp)\
+\n	sw	$6,40($sp)\
+\n	sw	$7,36($sp)\n\
 	lw	$ra, 4($fp)\n\
 	add	$sp, $fp, 4\n\ 
 	lw	$fp, 0($fp)\n\ 
@@ -379,7 +407,7 @@ void declareIdList(AST_NODE* declarationNode, SymbolAttributeKind isVariableOrTy
             {
             case NORMAL_ID:
                 attribute->attr.typeDescriptor = typeNode->semantic_value.identifierSemanticValue.symbolTableEntry->attribute->attr.typeDescriptor;
-		attribute->offset = frame_size-32;
+		attribute->offset = frame_size-84;
 		frame_size+=4;
                 break;
             case ARRAY_ID:
@@ -426,10 +454,11 @@ void declareIdList(AST_NODE* declarationNode, SymbolAttributeKind isVariableOrTy
 			int temp=1;
                         for(indexType = 0, indexId = idArrayDimension; indexId < idArrayDimension + typeArrayDimension; ++indexType, ++indexId)
                         {
-                            temp *= attribute->attr.typeDescriptor->properties.arrayProperties.sizeInEachDimension[indexId] = 
+                            attribute->attr.typeDescriptor->properties.arrayProperties.sizeInEachDimension[indexId] = 
                                 typeNode->semantic_value.identifierSemanticValue.symbolTableEntry->attribute->attr.typeDescriptor->properties.arrayProperties.sizeInEachDimension[indexType];
+			    temp *= attribute->attr.typeDescriptor->properties.arrayProperties.sizeInEachDimension[indexId];
                         }
-			    attribute->offset = frame_size-32;
+			    attribute->offset = frame_size-84;
 			    frame_size += temp*4;
 			
                     }
@@ -445,7 +474,7 @@ void declareIdList(AST_NODE* declarationNode, SymbolAttributeKind isVariableOrTy
                 else
                 {
                     attribute->attr.typeDescriptor = typeNode->semantic_value.identifierSemanticValue.symbolTableEntry->attribute->attr.typeDescriptor;
-		    attribute->offset = frame_size-32;
+		    attribute->offset = frame_size-84;
 		    frame_size += 4;
                 }
                 break;
@@ -1170,21 +1199,23 @@ int processVariableLValue(AST_NODE* idNode)
     else if(idNode->semantic_value.identifierSemanticValue.kind == ARRAY_ID)
     {
         int dimension = 0;
+        int reg_return;
+        int reg_num = getreg();
         AST_NODE *traverseDimList = idNode->child;
         while(traverseDimList)
         {
-            ++dimension;
-            int reg_return = processExprRelatedNode(traverseDimList);
-	    int reg_num = getreg();
-	    if(dimension <typeDescriptor->properties.arrayProperties.dimension){
-		fprintf(asm_out,"li $%d, %d\n",reg_num,typeDescriptor->properties.arrayProperties.sizeInEachDimension[dimension-1]);
-		fprintf(asm_out,"mul $%d, $%d, $%d\n",reg_num,reg_return,reg_num);
-		fprintf(asm_out,"add $%d, $%d, $%d\n",reg_offset, reg_offset,reg_num);
+            reg_return = processExprRelatedNode(traverseDimList);
+	    //reg_num = getreg();
+            if(dimension == 0){
+	        fprintf(asm_out,"move $%d, $%d\n",reg_num, reg_return);
 	    }
 	    else{
-		fprintf(asm_out,"add $%d, $%d, $%d\n",reg_offset, reg_offset,reg_return);
+                int reg_ime = getreg();
+		fprintf(asm_out,"li $%d, %d\n",reg_ime,typeDescriptor->properties.arrayProperties.sizeInEachDimension[dimension]);
+		fprintf(asm_out,"mul $%d, $%d, $%d\n",reg_num,reg_ime,reg_num);
+		fprintf(asm_out,"add $%d, $%d, $%d\n",reg_num,reg_return,reg_num);
+	        free_reg(reg_ime);
 	    }
-	    free_reg(reg_num);
   	    free_reg(reg_return);
 
             if(traverseDimList->dataType == ERROR_TYPE)
@@ -1197,7 +1228,14 @@ int processVariableLValue(AST_NODE* idNode)
                 idNode->dataType = ERROR_TYPE;
             }
             traverseDimList = traverseDimList->rightSibling;
+            ++dimension;
         }
+        int temp_ime = getreg();
+	fprintf(asm_out,"li $%d, 4\n",temp_ime);
+	fprintf(asm_out,"mul $%d, $%d, $%d\n",reg_num,temp_ime,reg_num);
+        fprintf(asm_out,"add $%d, $%d, $%d\n",reg_offset, reg_offset,reg_num);
+	free_reg(reg_num);
+	free_reg(temp_ime);
         if(typeDescriptor->kind == SCALAR_TYPE_DESCRIPTOR)
         {
             printErrorMsg(idNode, NOT_ARRAY);
@@ -1672,7 +1710,7 @@ void declareFunction(AST_NODE* declarationNode)
     {
         //codegen
         write_prolog(functionNameID->semantic_value.identifierSemanticValue.identifierName);
-	frame_size = 32;
+	frame_size = 88;
         AST_NODE *blockNode = parameterListNode->rightSibling;
         AST_NODE *traverseListNode = blockNode->child;
         while(traverseListNode)
