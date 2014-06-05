@@ -39,15 +39,35 @@ void evaluateExprValue(AST_NODE* exprNode);
 void write_prolog(char* label);
 void write_epilog(char* label);
 int getreg();
+void free_reg(int);
 
 FILE* asm_out;
 int frame_size=0;
-int reg[15]={};
+int reg[26]={};
 int if_num = 0;
 int else_num = 0;
 int exit_num = 0;
 int while_num = 0;
 int while_exit_num = 0;
+
+
+int getreg(){
+   int i=4;
+   for(i=4;i<26;i++){
+       if(reg[i]==0){
+	  reg[i] = 1;
+          return i;
+       }
+   }
+
+   return rand()%22+4; 
+
+}
+
+void free_reg(int i){
+   reg[i] = 0;
+}
+
 
 typedef enum ErrorMsgKind
 {
@@ -523,15 +543,19 @@ int checkAssignOrExpr(AST_NODE* assignOrExpreelatedNode)
 
 void checkWhileStmt(AST_NODE* whileNode)
 {
+    int w_num, w_exit;
+    w_num = ++while__num;
+    w_exit = ++while_exit_num;
     AST_NODE* boolExpression = whileNode->child;
-    fprintf(asm_out,"_while%d:\n",++while_num);	
+    fprintf(asm_out,"_while%d:\n",w_num);	
     int reg_return = checkAssignOrExpr(boolExpression);
-    fprintf(asm_out,"beqz $%d, _while_exit%d\n",reg_return,++while_exit_num);	
+    free_reg(reg_return);
+    fprintf(asm_out,"beqz $%d, _while_exit%d\n",reg_return,w_exit);	
     
     AST_NODE* bodyNode = boolExpression->rightSibling;
     processStmtNode(bodyNode);
-    fprintf(asm_out,"j _while%d:",while_num);
-    fprintf(asm_out,"_while_exit%d:",while_exit_num);
+    fprintf(asm_out,"j _while%d:",w_num);
+    fprintf(asm_out,"_while_exit%d:",w_exit);
 }
 
 
@@ -555,12 +579,13 @@ int checkAssignmentStmt(AST_NODE* assignmentNode)
     int r1 = processVariableLValue(leftOp);
     int r2 = processExprRelatedNode(rightOp);
     
-    if(r1 == -2) //global variable
+    if(r1 == -2){ //global variable
 	symbolTableEntry *symbolTableEntry = retrieveSymbol(leftOp->semantic_value.identifierSemanticValue.identifierName);
 	fprintf(asm_out,"move $_%s, $%d\n",symbolTableEntry->name,r2);		
-    }else if(r1 != -1) //assume local variable
+    }
+    else if(r1 != -1) //assume local variable
     {	
-	fprintf(asm_out,"add $%d, $%d, fp\n",r1,r1);	
+	fprintf(asm_out,"sub $%d, fp, $%d\n",r1,r1);	
 	fprintf(asm_out,"sw $%d, $%d\n",r2,r1);
 	free_reg(r1);
     }
