@@ -15,6 +15,10 @@ int HASH(char * str) {
 
 SymbolTable symbolTable;
 
+int returnCurrentLv(){
+    return symbolTable.currentLevel;
+}
+
 SymbolTableEntry* newSymbolTableEntry(int nestingLevel)
 {
     SymbolTableEntry* symbolTableEntry = (SymbolTableEntry*)malloc(sizeof(SymbolTableEntry));

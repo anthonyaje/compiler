@@ -1,4 +1,4 @@
-<<<<<<< HEAD
+
 float a;
 float f(){
 	float a;
@@ -10,27 +10,18 @@ for(b=0;a<0;a=a+1){}
 
 int main() {
     int b[1][2];   
-=======
 float f(){
 float a;
 return 5*123-2141-2/0.6;
 }
 int main() {
         int b[1][2];   
->>>>>>> 3e0beea08065dc9a6b8ed4dc01745130c470fb8c
 	float c;
 	int d;
 	a=0; 
 	b[1][1] = b[1][1]+5+d+b[1][2][3];  
 	f(a,b,c);
-<<<<<<< HEAD
+
 	b[2.6][2.5] = 0.5;
-=======
-<<<<<<< HEAD
-	b[2.6][2.5] = 0.5;
-=======
-	b[2.6][2.5] == 0.5;
->>>>>>> 3e0beea08065dc9a6b8ed4dc01745130c470fb8c
->>>>>>> 0856867a8f5e324017713fcfd3b914ff6f512912
-	
+
 }

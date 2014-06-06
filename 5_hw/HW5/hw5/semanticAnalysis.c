@@ -438,6 +438,7 @@ void declareIdList(AST_NODE* declarationNode, SymbolAttributeKind isVariableOrTy
                     break;
                 }
                 attribute->attr.typeDescriptor = (TypeDescriptor*)malloc(sizeof(TypeDescriptor));
+		attribute->offset = frame_size-84;
                 processDeclDimList(traverseIDList, attribute->attr.typeDescriptor, ignoreArrayFirstDimSize);
                 if(traverseIDList->dataType == ERROR_TYPE)
                 {
@@ -468,15 +469,11 @@ void declareIdList(AST_NODE* declarationNode, SymbolAttributeKind isVariableOrTy
                             typeArrayDimension + idArrayDimension;
                         int indexType = 0;
                         int indexId = 0;
-			int temp=1;
                         for(indexType = 0, indexId = idArrayDimension; indexId < idArrayDimension + typeArrayDimension; ++indexType, ++indexId)
                         {
                             attribute->attr.typeDescriptor->properties.arrayProperties.sizeInEachDimension[indexId] = 
                                 typeNode->semantic_value.identifierSemanticValue.symbolTableEntry->attribute->attr.typeDescriptor->properties.arrayProperties.sizeInEachDimension[indexType];
-			    temp *= attribute->attr.typeDescriptor->properties.arrayProperties.sizeInEachDimension[indexId];
                         }
-			    attribute->offset = frame_size-84;
-			    frame_size += temp*4;
 			
                     }
                 }
@@ -510,6 +507,10 @@ void declareIdList(AST_NODE* declarationNode, SymbolAttributeKind isVariableOrTy
             {
                 traverseIDList->semantic_value.identifierSemanticValue.symbolTableEntry =
                     enterSymbol(traverseIDList->semantic_value.identifierSemanticValue.identifierName, attribute);
+	if(returnCurrentLv() == 0){
+	fprintf(asm_out,".data\n");
+	fprintf(asm_out,"_%s: .word 0\n",traverseIDList->semantic_value.identifierSemanticValue.identifierName);
+}
             }
         }
         traverseIDList = traverseIDList->rightSibling;
@@ -578,12 +579,12 @@ int checkAssignmentStmt(AST_NODE* assignmentNode)
     
     if(r1 == -2){ //global variable
 	SymbolTableEntry *symbolTableEntry = retrieveSymbol(leftOp->semantic_value.identifierSemanticValue.identifierName);
-	fprintf(asm_out,"move $_%s, $%d\n",symbolTableEntry->name,r2);		
+	fprintf(asm_out,"sw $%d, _%s\n",r2,symbolTableEntry->name);		
     }
     else if(r1 != -1) //assume local variable
     {	
-	fprintf(asm_out,"sub $%d, fp, $%d\n",r1,r1);	
-	fprintf(asm_out,"sw $%d, $%d\n",r2,r1);
+	fprintf(asm_out,"sub $%d, $fp, $%d\n",r1,r1);	
+	fprintf(asm_out,"sw $%d, 0($%d)\n",r2,r1);
 	free_reg(r1);
     }
 
@@ -692,7 +693,7 @@ void checkWriteFunction(AST_NODE* functionCallNode)
 }
 
 void checkReadFunction(AST_NODE* functionCallNode){
-    fprintf(asm_out,"li $v0 5\n");
+    fprintf(asm_out,"li $v0, 5\n");
     fprintf(asm_out,"syscall\n");	
 }
 
@@ -1205,7 +1206,7 @@ int processVariableLValue(AST_NODE* idNode)
 	//FIXME return -2 for global
 	return -2;
     }
-    fprintf(asm_out,"lw $%d, %d\n",reg_offset,offset);
+    fprintf(asm_out,"li $%d, %d\n",reg_offset,offset);
         
     if(idNode->semantic_value.identifierSemanticValue.kind == NORMAL_ID)
     {
@@ -1371,10 +1372,10 @@ int processVariableRValue(AST_NODE* idNode)
     }
     int reg_num = getreg();
     if(symbolTableEntry->nestingLevel == 0){
-        fprintf(asm_out,"lw $%d, %s\n",reg_num,idNode->semantic_value.identifierSemanticValue.identifierName);
+        fprintf(asm_out,"lw $%d, _%s\n",reg_num,idNode->semantic_value.identifierSemanticValue.identifierName);
     }
     else{
-        fprintf(asm_out,"lw $%d, -%d(fp)\n",reg_num,symbolTableEntry->attribute->offset);
+        fprintf(asm_out,"lw $%d, -%d($fp)\n",reg_num,symbolTableEntry->attribute->offset);
     }
 
  return reg_num;
@@ -1588,6 +1589,8 @@ void processDeclDimList(AST_NODE* idNode, TypeDescriptor* typeDescriptor, int ig
     typeDescriptor->kind = ARRAY_TYPE_DESCRIPTOR;
     AST_NODE* traverseDim = variableDeclDimList;
     int dimension = 0;
+    int temp=1;
+
     if(ignoreFirstDimSize && traverseDim->nodeType == NUL_NODE)
     {
         typeDescriptor->properties.arrayProperties.sizeInEachDimension[dimension] = 0;
@@ -1622,13 +1625,13 @@ void processDeclDimList(AST_NODE* idNode, TypeDescriptor* typeDescriptor, int ig
         }
         else
         {
-            typeDescriptor->properties.arrayProperties.sizeInEachDimension[dimension] = 
+            temp *= typeDescriptor->properties.arrayProperties.sizeInEachDimension[dimension] = 
                 traverseDim->semantic_value.exprSemanticValue.constEvalValue.iValue;
         }
-
         ++dimension;
         traverseDim = traverseDim->rightSibling;
     }
+    frame_size += temp*4;
 
     typeDescriptor->properties.arrayProperties.dimension = dimension;
 }
@@ -1639,6 +1642,7 @@ void processDeclDimList(AST_NODE* idNode, TypeDescriptor* typeDescriptor, int ig
 void declareFunction(AST_NODE* declarationNode)
 {
 
+printf("indeclare function");
     AST_NODE* returnTypeNode = declarationNode->child;
 
     int errorOccur = 0;
