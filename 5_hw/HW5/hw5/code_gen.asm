@@ -84,7 +84,7 @@ sub $4, $fp, $4
 sw $5, 0($4)
 li $4, 4
 sub $4, $fp, $4
-li $4, 44
+lw $4, 0($4)
 move $v0, $4
 j _end_main
 # epilogue sequence
