@@ -66,7 +66,7 @@ int getreg(){
 
 void free_reg(int i){
    if(i>=26 || i<4)
-	 printf("Try to free unavailable register\n");
+	 printf("Try to free unavailable register: %d\n",i);
    else reg[i] = 0;
 }
 
@@ -510,6 +510,8 @@ void declareIdList(AST_NODE* declarationNode, SymbolAttributeKind isVariableOrTy
 	if(returnCurrentLv() == 0){
 	fprintf(asm_out,".data\n");
 	fprintf(asm_out,"_%s: .word 0\n",traverseIDList->semantic_value.identifierSemanticValue.identifierName);
+	fprintf(asm_out,".text\n");
+
 }
             }
         }
@@ -583,6 +585,11 @@ int checkAssignmentStmt(AST_NODE* assignmentNode)
     }
     else if(r1 != -1) //assume local variable
     {	
+	if(r2 == -2){ //global variable
+	    SymbolTableEntry *symbolTableEntry = retrieveSymbol(rightOp->semantic_value.identifierSemanticValue.identifierName);
+	    r2 = getreg();
+	    fprintf(asm_out,"lw $%d, _%s\n",r2,symbolTableEntry->name);		
+	}	
 	fprintf(asm_out,"sub $%d, $fp, $%d\n",r1,r1);	
 	fprintf(asm_out,"sw $%d, 0($%d)\n",r2,r1);
 	free_reg(r1);
@@ -660,14 +667,17 @@ void checkWriteFunction(AST_NODE* functionCallNode)
 	    case INT_TYPE:
 		fprintf(asm_out,".data\n");
 		fprintf(asm_out,"_m%d: .word %d\n",++m_num,actualParameter->semantic_value.const1->const_u.intval);
+		fprintf(asm_out,".text\n");
 		break;
 	    case FLOAT_TYPE:
 		fprintf(asm_out,".data\n");
 		fprintf(asm_out,"_m%d: .word %d\n",++m_num,actualParameter->semantic_value.const1->const_u.fval);
+		fprintf(asm_out,".text\n");
 		break;
 	    case CONST_STRING_TYPE:
 		fprintf(asm_out,".data\n");
-		fprintf(asm_out,"_m%d: .asciiz \"%s\"\n",++m_num,actualParameter->semantic_value.const1->const_u.sc);
+		fprintf(asm_out,"_m%d: .asciiz %s\n",++m_num,actualParameter->semantic_value.const1->const_u.sc);
+		fprintf(asm_out,".text\n");
 		fprintf(asm_out,"li $v0, 4\n");
 		fprintf(asm_out,"la $a0, _m%d\n",m_num);
 		fprintf(asm_out,"syscall\n");
@@ -713,6 +723,8 @@ void checkFunctionCall(AST_NODE* functionCallNode)
         checkReadFunction(functionCallNode);
         return;
     }
+
+    fprintf(asm_out,"jal %s\n",functionIDNode->semantic_value.identifierSemanticValue.identifierName);
 
     SymbolTableEntry* symbolTableEntry = retrieveSymbol(functionIDNode->semantic_value.identifierSemanticValue.identifierName);
     functionIDNode->semantic_value.identifierSemanticValue.symbolTableEntry = symbolTableEntry;
@@ -1201,11 +1213,11 @@ int processVariableLValue(AST_NODE* idNode)
 
     TypeDescriptor *typeDescriptor = idNode->semantic_value.identifierSemanticValue.symbolTableEntry->attribute->attr.typeDescriptor;
     
-    int reg_offset = getreg();
     if(symbolTableEntry->nestingLevel == 0){
 	//FIXME return -2 for global
 	return -2;
     }
+    int reg_offset = getreg();
     fprintf(asm_out,"li $%d, %d\n",reg_offset,offset);
         
     if(idNode->semantic_value.identifierSemanticValue.kind == NORMAL_ID)
@@ -1286,24 +1298,30 @@ int processVariableLValue(AST_NODE* idNode)
 int processVariableRValue(AST_NODE* idNode)
 {
     SymbolTableEntry *symbolTableEntry = retrieveSymbol(idNode->semantic_value.identifierSemanticValue.identifierName);
-     
-    idNode->semantic_value.identifierSemanticValue.symbolTableEntry = symbolTableEntry;
+    int offset = symbolTableEntry->attribute->offset; 
     if(!symbolTableEntry)
     {
         printErrorMsg(idNode, SYMBOL_UNDECLARED);
         idNode->dataType = ERROR_TYPE;
-        return;
+        return -1;
     }
+    idNode->semantic_value.identifierSemanticValue.symbolTableEntry = symbolTableEntry;
     
     if(symbolTableEntry->attribute->attributeKind == TYPE_ATTRIBUTE)
     {
         printErrorMsg(idNode, IS_TYPE_NOT_VARIABLE);
         idNode->dataType = ERROR_TYPE;
-        return;
+        return -1;
     }    
 
     TypeDescriptor *typeDescriptor = idNode->semantic_value.identifierSemanticValue.symbolTableEntry->attribute->attr.typeDescriptor;
-        
+     if(symbolTableEntry->nestingLevel == 0){
+        //FIXME return -2 for global
+        return -2;
+     }
+     int reg_offset = getreg();
+     fprintf(asm_out,"li $%d, %d\n",reg_offset,offset);
+                            
     if(idNode->semantic_value.identifierSemanticValue.kind == NORMAL_ID)
     {
         if(typeDescriptor->kind == ARRAY_TYPE_DESCRIPTOR)
@@ -1332,11 +1350,24 @@ int processVariableRValue(AST_NODE* idNode)
         else
         {
             int dimension = 0;
+	    int reg_return;
+	    int reg_num = getreg();
             AST_NODE *traverseDimList = idNode->child;
             while(traverseDimList)
             {
-                ++dimension;
-                free_reg(processExprRelatedNode(traverseDimList));
+                reg_return = (processExprRelatedNode(traverseDimList));
+		if(dimension == 0){
+                    fprintf(asm_out,"move $%d, $%d\n",reg_num, reg_return);
+                }
+            	else{
+                    int reg_ime = getreg();
+                    fprintf(asm_out,"li $%d, %d\n",reg_ime,typeDescriptor->properties.arrayProperties.sizeInEachDimension[dimension]);
+                    fprintf(asm_out,"mul $%d, $%d, $%d\n",reg_num,reg_ime,reg_num);
+                    fprintf(asm_out,"add $%d, $%d, $%d\n",reg_num,reg_return,reg_num);
+                    free_reg(reg_ime);
+                }
+                free_reg(reg_return);
+
                 if(traverseDimList->dataType == ERROR_TYPE)
                 {
                     idNode->dataType = ERROR_TYPE;
@@ -1347,7 +1378,15 @@ int processVariableRValue(AST_NODE* idNode)
                     idNode->dataType = ERROR_TYPE;
                 }
                 traverseDimList = traverseDimList->rightSibling;
+                ++dimension;
             }
+	    int temp_ime = getreg();
+	    fprintf(asm_out,"li $%d, 4\n",temp_ime);
+            fprintf(asm_out,"mul $%d, $%d, $%d\n",reg_num,temp_ime,reg_num);
+            fprintf(asm_out,"add $%d, $%d, $%d\n",reg_offset, reg_offset,reg_num);
+            free_reg(reg_num);
+            free_reg(temp_ime);
+
             if(idNode->dataType != ERROR_TYPE)
             {
                 if(dimension == typeDescriptor->properties.arrayProperties.dimension)
@@ -1370,14 +1409,9 @@ int processVariableRValue(AST_NODE* idNode)
             }
         }
     }
-    int reg_num = getreg();
-    if(symbolTableEntry->nestingLevel == 0){
-        fprintf(asm_out,"lw $%d, _%s\n",reg_num,idNode->semantic_value.identifierSemanticValue.identifierName);
-    }
-    else{
-        fprintf(asm_out,"lw $%d, -%d($fp)\n",reg_num,symbolTableEntry->attribute->offset);
-    }
-
+    fprintf(asm_out,"sub $%d, $fp, $%d\n",reg_offset,reg_offset);
+    fprintf(asm_out,"lw $%d, 0($%d)\n",reg_offset,reg_offset);
+    int reg_num = reg_offset;
  return reg_num;
 }
 
@@ -1509,7 +1543,6 @@ void processStmtNode(AST_NODE* stmtNode)
             checkIfStmt(stmtNode);
             break;
         case FUNCTION_CALL_STMT:
-	    fprintf(asm_out,"jal %s\n",stmtNode->child->semantic_value.identifierSemanticValue.identifierName);
             checkFunctionCall(stmtNode);
             break;
         case RETURN_STMT:
@@ -1642,7 +1675,6 @@ void processDeclDimList(AST_NODE* idNode, TypeDescriptor* typeDescriptor, int ig
 void declareFunction(AST_NODE* declarationNode)
 {
 
-printf("indeclare function");
     AST_NODE* returnTypeNode = declarationNode->child;
 
     int errorOccur = 0;
