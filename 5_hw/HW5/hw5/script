@@ -1,4 +1,7 @@
 make clean
 make
-./parser pattern/simple.c
+./parser pattern/simplecontrol.c
 #vim code_gen.asm
+spim -f code_gen.asm
+
+
