@@ -80,8 +80,9 @@ int getreg_f(){
 }
 
 void free_reg(int i){
-   //if(i>=26 || i<8){}
+   if(i>132 || i<8){}
 	 //printf("Try to free unavailable register: %d\n",i);
+   else
    reg[i] = 0;
 }
 
@@ -571,13 +572,14 @@ void declareIdList(AST_NODE* declarationNode, SymbolAttributeKind isVariableOrTy
 				fprintf(asm_out,"l.s $f%d, _%s\n",r2%100,symbolTableEntry->name);					     
 				fprintf(asm_out,"sub $%d, $fp, $%d\n",r1,r1);	
 				fprintf(asm_out,"s.s $f%d, 0($%d)\n",r2%100,r1);
-			}	
-			free_reg(r1);
-			free_reg(r2);
+			    }	
+			    free_reg(r1);
+			    free_reg(r2);
+			}
 		    }
 		}
 
-            }
+	    }
         }
         traverseIDList = traverseIDList->rightSibling;
     }
@@ -650,50 +652,145 @@ int checkAssignmentStmt(AST_NODE* assignmentNode)
     if(leftOp->dataType != FLOAT_TYPE){ 
     //LHS is INT
 	    if(r1 == -2){ //global variable
-		SymbolTableEntry *symbolTableEntry = retrieveSymbol(leftOp->semantic_value.identifierSemanticValue.identifierName);
+		SymbolTableEntry *symbolTableEntry_l = retrieveSymbol(leftOp->semantic_value.identifierSemanticValue.identifierName);
 		if(r2 == -2){ //global variable
-		    SymbolTableEntry *symbolTableEntry = retrieveSymbol(rightOp->semantic_value.identifierSemanticValue.identifierName);
-		        r2 = getreg();
-		        fprintf(asm_out,"lw $%d, _%s\n",r2,symbolTableEntry->name);
-		        fprintf(asm_out,"sw $%d, _%s\n",r2,symbolTableEntry->name);
+		    SymbolTableEntry *symbolTableEntry_r = retrieveSymbol(rightOp->semantic_value.identifierSemanticValue.identifierName);
+		    if(rightOp->dataType == INT_TYPE){
+                         r2 = getreg();
+                         fprintf(asm_out,"lw $%d, _%s\n",r2,symbolTableEntry_r->name);
+                         fprintf(asm_out,"sw $%d, _%s\n",r2,symbolTableEntry_l->name);
+                    }
+                    else{//RHS is NOT INT
+                         int old_r2 = getreg_f();
+                         r2 = getreg();
+                         fprintf(asm_out,"l.s $f%d, _%s\n",old_r2,symbolTableEntry_r->name);
+                         fprintf(asm_out,"cvt.w.s $f%d, $f%d\n",old_r2%100,old_r2%100);
+                         fprintf(asm_out,"mfc1 $%d, $f%d\n",r2,old_r2%100);
+                         fprintf(asm_out,"sw $%d, _%s\n",r2,symbolTableEntry_l->name);
+			 free_reg(old_r2);
+                    }
 		}	
- 	  	else{
-		    fprintf(asm_out,"sw $%d, _%s\n",r2,symbolTableEntry->name);			       	      }
+ 	  	else if(r2<100){
+		    fprintf(asm_out,"sw $%d, _%s\n",r2,symbolTableEntry_l->name);
+       	        }
+		else{
+			 int old_r2 = r2;
+                         free_reg(r2);
+                         r2 = getreg();
+                         fprintf(asm_out,"cvt.w.s $f%d, $f%d\n",old_r2%100,old_r2%100);
+                         fprintf(asm_out,"mfc1 $%d, $f%d\n",r2,old_r2%100);
+                         fprintf(asm_out,"sw $%d, _%s\n",r2,symbolTableEntry_l->name);
+		}
+
 	    }
 	    else if(r1 != -1) //assume local variable
 	    {	
 		if(r2 == -2){ //global variable
 		    SymbolTableEntry *symbolTableEntry = retrieveSymbol(rightOp->semantic_value.identifierSemanticValue.identifierName);
+		    //r2 = getreg();
+		    //fprintf(asm_out,"lw $%d, _%s\n",r2,symbolTableEntry->name);		
+		    if(rightOp->dataType == INT_TYPE){
+                         r2 = getreg();
+                         fprintf(asm_out,"sub $%d, $fp, $%d\n",r1,r1);
+                         fprintf(asm_out,"lw $%d, _%s\n",r2,symbolTableEntry->name);
+                         fprintf(asm_out,"sw $%d, 0($%d)\n",r2,r1);
+                    }
+                    else{//RHS is NOT INT
+                         int old_r2 = getreg_f();
+                         r2 = getreg();
+                         fprintf(asm_out,"sub $%d, $fp, $%d\n",r1,r1);
+                         fprintf(asm_out,"l.s $f%d, _%s\n",old_r2,symbolTableEntry->name);
+                         fprintf(asm_out,"cvt.w.s $f%d, $f%d\n",old_r2%100,old_r2%100);
+                         fprintf(asm_out,"mfc1 $%d, $f%d\n",r2,old_r2%100);
+                         fprintf(asm_out,"sw $%d, 0($%d)\n",r2,r1);
+                         free_reg(old_r2);
+                    }
+		}
+	        else if(r2<100){
+		    fprintf(asm_out,"sub $%d, $fp, $%d\n",r1,r1);	
+		    fprintf(asm_out,"sw $%d, 0($%d)\n",r2,r1);
+		}
+		else{
+		    int old_r2 = r2;
+		    free_reg(r2);
+		    fprintf(asm_out,"sub $%d, $fp, $%d\n",r1,r1);
+		    fprintf(asm_out,"cvt.w.s $f%d, $f%d\n",r2%100,r2%100);
 		    r2 = getreg();
-		    fprintf(asm_out,"lw $%d, _%s\n",r2,symbolTableEntry->name);		
+		    fprintf(asm_out,"mfc1 $%d $f%d\n",r2,old_r2%100);
+		    fprintf(asm_out,"sw $%d, 0($%d)\n",r2,r1);
 		}	
-		fprintf(asm_out,"sub $%d, $fp, $%d\n",r1,r1);	
-		fprintf(asm_out,"sw $%d, 0($%d)\n",r2,r1);
 		free_reg(r1);
 	    }
     }
     else{
     //LHS is FLOAT
 	    if(r1 == -2){ //global variable
-		SymbolTableEntry *symbolTableEntry = retrieveSymbol(leftOp->semantic_value.identifierSemanticValue.identifierName);
+		SymbolTableEntry *symbolTableEntry_l = retrieveSymbol(leftOp->semantic_value.identifierSemanticValue.identifierName);
 		if(r2 == -2){ //global variable
-		    SymbolTableEntry *symbolTableEntry = retrieveSymbol(rightOp->semantic_value.identifierSemanticValue.identifierName);
-		    r2 = getreg_f();
-		    fprintf(asm_out,"l.s $f%d, _%s\n",r2%100,symbolTableEntry->name);
-		    fprintf(asm_out,"s.s $f%d, _%s\n",r2%100,symbolTableEntry->name);
+		    SymbolTableEntry *symbolTableEntry_r = retrieveSymbol(rightOp->semantic_value.identifierSemanticValue.identifierName);
+		    if(rightOp->dataType == FLOAT_TYPE){
+		         r2 = getreg_f();
+		         fprintf(asm_out,"l.s $f%d, _%s\n",r2%100,symbolTableEntry_r->name);
+		         fprintf(asm_out,"s.s $f%d, _%s\n",r2%100,symbolTableEntry_l->name);
+		    }
+		    else{
+			 int load_r2 = getreg();
+			 free_reg(load_r2);
+		         r2 = getreg_f();
+		         fprintf(asm_out,"lw $%d, _%s\n",load_r2,symbolTableEntry_r->name);
+		         fprintf(asm_out,"mtc1 $%d, $f%d\n",load_r2,r2%100);
+		         fprintf(asm_out,"cvt.s.w $f%d, $f%d\n",r2%100,r2%100);
+		         fprintf(asm_out,"s.s $f%d, _%s\n",r2%100,symbolTableEntry_l->name);
+		    }
 		}	
-		fprintf(asm_out,"s.s $f%d, _%s\n",r2%100,symbolTableEntry->name);	
+ 	  	else if(r2<100){ //RHS is INT
+		    int fl_r2=getreg_f();
+		    free_reg(r2);//need to return float
+		    fprintf(asm_out,"mtc1 $%d, $f%d\n",r2,fl_r2%100);
+		    fprintf(asm_out,"cvt.s.w $f%d, $f%d\n",fl_r2%100,fl_r2%100);
+		    fprintf(asm_out,"s.s $f%d, _%s\n",fl_r2%100,symbolTableEntry_l->name);
+		    r2=fl_r2;
+      	        }
+		else{ //RHS is FLOAT
+		    fprintf(asm_out,"s.s $f%d, _%s\n",r2%,symbolTableEntry_l->name);		
+	        }
 	    }
-	    else if(r1 != -1) //assume local variable
+	    else if(r1 != -1) //LHS is FLOAT & local
 	    {	
 		if(r2 == -2){ //global variable
 		    SymbolTableEntry *symbolTableEntry = retrieveSymbol(rightOp->semantic_value.identifierSemanticValue.identifierName);
-		    r2 = getreg_f();
-		    fprintf(asm_out,"l.s $f%d, _%s\n",r2%100,symbolTableEntry->name);
-		    //free_reg(r2);		
+		    //r2 = getreg_f();
+		    //fprintf(asm_out,"l.s $f%d, _%s\n",r2%100,symbolTableEntry->name);
+		    if(rightOp->dataType == FLOAT_TYPE){
+                         r2 = getreg_f();
+                         fprintf(asm_out,"sub $%d, $fp, $%d\n",r1,r1);
+                         fprintf(asm_out,"l.s $f%d, _%s\n",r2%100,symbolTableEntry->name);
+                         fprintf(asm_out,"s.s $f%d, 0($%d)\n",r2%100,r1);
+                    }
+                    else{//RHS is NOT FLOAT
+                         int int_r2 = getreg();
+			 free_reg(int_r2);
+                         r2 = getreg_f();
+                         fprintf(asm_out,"sub $%d, $fp, $%d\n",r1,r1);
+                         fprintf(asm_out,"lw $f%d, _%s\n",int_r2,symbolTableEntry->name);
+			 fprintf(asm_out,"mtc1 $%d, $f%d\n",int_r2,r2%100);
+                         fprintf(asm_out,"cvt.s.w $f%d, $f%d\n",r2%100,r2%100);
+                         fprintf(asm_out,"s.s $%d, 0($%d)\n",r2%100,r1);
+                    }
+		}
+		if(r2<100){ //RHS is INT && LHS is local FLOAT
+		    int fl_r2=getreg_f();
+                    free_reg(r2);
+		    fprintf(asm_out,"sub $%d, $fp, $%d\n",r1,r1);
+                    fprintf(asm_out,"mtc1 $%d, $f%d\n",r2,fl_r2%100);
+                    fprintf(asm_out,"cvt.s.w $f%d, $f%d\n",fl_r2%100,fl_r2%100);
+                    fprintf(asm_out,"s.s $%d, 0($%d)\n",fl_r2%100,r1);
+		    r2=fl_r2;
+		}
+		else{ //RHS is FLOAT && LHS is local FLOAT
+		    fprintf(asm_out,"sub $%d, $fp, $%d\n",r1,r1);
+                    fprintf(asm_out,"s.s $%d, 0($%d)\n",r2%100,r1);
 		}	
-		fprintf(asm_out,"sub $%d, $fp, $%d\n",r1,r1);	
-		fprintf(asm_out,"s.s $f%d, 0($%d)\n",r2%100,r1);
 		free_reg(r1);
 	    }
     }
@@ -800,7 +897,7 @@ void checkWriteFunction(AST_NODE* functionCallNode)
 			break;
 		    case FLOAT_TYPE:
 			fprintf(asm_out,"li $v0, 2\n");
-			fprintf(asm_out,"move $f12, $f%d\n",reg%100);
+			fprintf(asm_out,"mov.s $f12, $f%d\n",reg%100);
 			fprintf(asm_out,"syscall\n");
 			break;
 		    default:
@@ -1286,10 +1383,10 @@ int processExprNode(AST_NODE* exprNode)
 			 fprintf(asm_out,"easter egg: cant do AND in floating points");
 			break;
 		}
-		fprintf(asm_out,"c.li.s $f%d,%d\n",reg_num,0);
+		fprintf(asm_out,"li.s $f%d,%f\n",reg_num,0);
 		fprintf(asm_out,"j _f_exit%d\n",f_exit);
 		fprintf(asm_out,"_f_label%d:\n",f_label++);
-		fprintf(asm_out,"c.li.s $f%d,%d\n",reg_num,1);
+		fprintf(asm_out,"li.s $f%d,%f\n",reg_num,1);
 		fprintf(asm_out,"_f_exit%d:\n",f_exit++);
 		reg_num = old_reg_num;
 	}
@@ -1394,13 +1491,17 @@ int processExprNode(AST_NODE* exprNode)
 		}
 	}
 	else{
+		int ff; 
 	        reg_num = getreg_f();
 		switch(op){
 		    case UNARY_OP_POSITIVE:
 			//fprintf(asm_out," $%d, $%d\n",reg_num,r1);
 			break;
 		    case UNARY_OP_NEGATIVE:
-			 fprintf(asm_out,"mul.s $%d, $%d, -1\n",reg_num,r1);
+			 ff = getreg_f();
+			 free_reg(ff);
+			 fprintf(asm_out,"li.s $f%d, %f\n",ff%100,-1);
+			 fprintf(asm_out,"mul.s $f%d, $f%d, $f%d\n",reg_num%100,r1%100,ff%100);
 			break;
 		    case UNARY_OP_LOGICAL_NEGATION:
 			 fprintf(asm_out,"沒辦法not\n");
@@ -1972,7 +2073,7 @@ void declareFunction(AST_NODE* declarationNode)
     attribute->attr.functionSignature->parameterList = NULL;
 
     
-int enterFunctionNameToSymbolTable = 0;
+    int enterFunctionNameToSymbolTable = 0;
     if(!errorOccur)
     {
         enterSymbol(functionNameID->semantic_value.identifierSemanticValue.identifierName, attribute);
@@ -2072,7 +2173,9 @@ int enterFunctionNameToSymbolTable = 0;
     }
 
     write_epilog(functionNameID->semantic_value.identifierSemanticValue.identifierName);
-
+    if(1){
+	  printf("hi there\n");
+	}
 }
 
 

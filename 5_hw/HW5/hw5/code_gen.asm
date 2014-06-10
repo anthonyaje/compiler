@@ -1,9 +1,4 @@
 _global_label:
-.data
-_global: .word 0
-.text
-li $8, 8
-sw $8, _global
 j _begin_main
 main:
 # prologue sequence
@@ -69,32 +64,38 @@ main:
 	s.s	$f31, 216($sp)
 j _global_label
 _begin_main:
-
-
-
+li $8, 12
+li $9, 1
+li $10, 2
+add $9, $9, $10
+li $10, 3
+mul $9, $9, $10
+li $10, 4
+li $11, 5
+div $10, $10, $11
+sub $9, $9, $10
+li $10, 1
+mul $10, $10, -1
+add $9, $9, $10
+sub $8, $fp, $8
+sw $9, 0($8)
 li $8, 12
 sub $8, $fp, $8
-li.s $f9, 5.5
-s.s $f9,0($8)
 lw $8, 0($8)
-li $v0,1 
+li $8, 12
+sub $8, $fp, $8
+lw $8, 0($8)
+li $v0, 1
 move $a0, $8
 syscall
-
 .data
-_m1: .asciiz "--------\n"
+_m1: .asciiz "\n"
 .text
 li $v0, 4
 la $a0, _m1
 syscall
-li $8, 28
-li $9, 12
-sub $9, $fp, $9
-lw $9, 0($9)
-sub $8, $fp, $8
-sw $9, 0($8)
 li $8, 4
-li.s $f9, 1.500000
+li $9, 1
 sub $8, $fp, $8
 sw $9, 0($8)
 li $8, 8
@@ -139,18 +140,54 @@ li $v0, 4
 la $a0, _m2
 syscall
 li $8, 24
-li $9, 1
-mul $9, $9, -1
+li.s $f1, 1.000000
+li.s $f2, 2.000000
+add.s $f1, $f1, $f2
+li.s $f1,0.000000
+j _f_exit0
+_f_label0:
+li.s $f1,0.000000
+_f_exit0:
+li.s $f2, 3.000000
+mul.s $f1, $f1, $f2
+li.s $f1,0.000000
+j _f_exit1
+_f_label1:
+li.s $f1,0.000000
+_f_exit1:
+li.s $f2, 4.000000
+li.s $f3, 5.000000
+div.s $f2, $f2, $f3
+li.s $f2,0.000000
+j _f_exit2
+_f_label2:
+li.s $f2,0.000000
+_f_exit2:
+sub.s $f1, $f1, $f2
+li.s $f1,0.000000
+j _f_exit3
+_f_label3:
+li.s $f1,0.000000
+_f_exit3:
+li.s $f2, 1.000000
+li.s $f3, 0.000000
+mul.s $f2, $f2, $f3
+add.s $f1, $f1, $f2
+li.s $f1,0.000000
+j _f_exit4
+_f_label4:
+li.s $f1,0.000000
+_f_exit4:
 sub $8, $fp, $8
-sw $9, 0($8)
+s.s $f1, 0($8)
 li $8, 24
 sub $8, $fp, $8
-lw $8, 0($8)
+l.s $f1, 0($8)
 li $8, 24
 sub $8, $fp, $8
-lw $8, 0($8)
-li $v0, 1
-move $a0, $8
+l.s $f1, 0($8)
+li $v0, 2
+mov.s $f12, $f1
 syscall
 .data
 _m3: .asciiz "\n"
@@ -159,43 +196,63 @@ li $v0, 4
 la $a0, _m3
 syscall
 li $8, 16
-li $9, 1
+li.s $f1, 1.000000
 sub $8, $fp, $8
-sw $9, 0($8)
+s.s $f1, 0($8)
 li $8, 20
-li $9, 2
+li.s $f1, 2.000000
 sub $8, $fp, $8
-sw $9, 0($8)
+s.s $f1, 0($8)
 li $8, 24
-li $9, 3
+li.s $f1, 3.000000
 sub $8, $fp, $8
-sw $9, 0($8)
+s.s $f1, 0($8)
 li $8, 24
 li $9, 16
 sub $9, $fp, $9
-lw $9, 0($9)
-li $10, 20
-sub $10, $fp, $10
-lw $10, 0($10)
-mul $9, $9, $10
-li $10, 24
-sub $10, $fp, $10
-lw $10, 0($10)
-li $11, 4
-mul $10, $10, $11
-sub $9, $9, $10
-li $10, 5
-sub $9, $9, $10
+l.s $f1, 0($9)
+li $9, 20
+sub $9, $fp, $9
+l.s $f2, 0($9)
+mul.s $f1, $f1, $f2
+li.s $f1,0.000000
+j _f_exit5
+_f_label5:
+li.s $f1,0.000000
+_f_exit5:
+li $9, 24
+sub $9, $fp, $9
+l.s $f2, 0($9)
+li.s $f3, 4.000000
+mul.s $f2, $f2, $f3
+li.s $f2,0.000000
+j _f_exit6
+_f_label6:
+li.s $f2,0.000000
+_f_exit6:
+sub.s $f1, $f1, $f2
+li.s $f1,0.000000
+j _f_exit7
+_f_label7:
+li.s $f1,0.000000
+_f_exit7:
+li.s $f2, 5.000000
+sub.s $f1, $f1, $f2
+li.s $f1,0.000000
+j _f_exit8
+_f_label8:
+li.s $f1,0.000000
+_f_exit8:
 sub $8, $fp, $8
-sw $9, 0($8)
+s.s $f1, 0($8)
 li $8, 24
 sub $8, $fp, $8
-lw $8, 0($8)
+l.s $f1, 0($8)
 li $8, 24
 sub $8, $fp, $8
-lw $8, 0($8)
-li $v0, 1
-move $a0, $8
+l.s $f1, 0($8)
+li $v0, 2
+mov.s $f12, $f1
 syscall
 .data
 _m4: .asciiz "\n"
@@ -329,6 +386,87 @@ _m10: .asciiz "\n"
 li $v0, 4
 la $a0, _m10
 syscall
+li $8, 12
+li.s $f1, 1.000000
+li.s $f2, 2.000000
+c.le.s $f1, $f2
+bc1f _f_label9
+li.s $f1,0.000000
+j _f_exit9
+_f_label9:
+li.s $f1,0.000000
+_f_exit9:
+sub $8, $fp, $8
+sw $101, 0($8)
+li $8, 12
+sub $8, $fp, $8
+lw $8, 0($8)
+li $8, 12
+sub $8, $fp, $8
+lw $8, 0($8)
+li $v0, 1
+move $a0, $8
+syscall
+.data
+_m11: .asciiz "\n"
+.text
+li $v0, 4
+la $a0, _m11
+syscall
+li $8, 12
+li.s $f1, 1.000000
+li.s $f2, 2.000000
+c.lt.s $f1, $f2
+bc1t _f_label10
+li.s $f1,0.000000
+j _f_exit10
+_f_label10:
+li.s $f1,0.000000
+_f_exit10:
+sub $8, $fp, $8
+sw $101, 0($8)
+li $8, 12
+sub $8, $fp, $8
+lw $8, 0($8)
+li $8, 12
+sub $8, $fp, $8
+lw $8, 0($8)
+li $v0, 1
+move $a0, $8
+syscall
+.data
+_m12: .asciiz "\n"
+.text
+li $v0, 4
+la $a0, _m12
+syscall
+li $8, 12
+li.s $f1, 1.000000
+li.s $f2, 2.000000
+c.eq.s $f1, $f2
+bc1f _f_label11
+li.s $f1,0.000000
+j _f_exit11
+_f_label11:
+li.s $f1,0.000000
+_f_exit11:
+sub $8, $fp, $8
+sw $101, 0($8)
+li $8, 12
+sub $8, $fp, $8
+lw $8, 0($8)
+li $8, 12
+sub $8, $fp, $8
+lw $8, 0($8)
+li $v0, 1
+move $a0, $8
+syscall
+.data
+_m13: .asciiz "\n"
+.text
+li $v0, 4
+la $a0, _m13
+syscall
 li $8, 0
 move $v0, $8
 j _end_main
@@ -393,6 +531,6 @@ _end_main:
 	lw	$fp, 0($fp)
 	jr	$ra
 .data 
-_framesize_of_main: .word 244
+_framesize_of_main: .word 240
 .data
 .text
