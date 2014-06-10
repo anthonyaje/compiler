@@ -3,6 +3,9 @@
 #include <string.h>
 #include "header.h"
 #include "symbolTable.h"
+#define FRAME_BASE_SIZE 216 
+#define FLOAT_REG_BASE 101
+
 int g_anyErrorOccur = 0;
 
 DATA_TYPE getBiggerType(DATA_TYPE dataType1, DATA_TYPE dataType2);
@@ -22,7 +25,7 @@ int checkAssignmentStmt(AST_NODE* assignmentNode);
 void checkIfStmt(AST_NODE* ifNode);
 void checkWriteFunction(AST_NODE* functionCallNode);
 void checkReadFunction(AST_NODE* functionCallNode);
-void checkFunctionCall(AST_NODE* functionCallNode);
+int checkFunctionCall(AST_NODE* functionCallNode);
 int processExprRelatedNode(AST_NODE* exprRelatedNode);
 void checkParameterPassing(Parameter* formalParameter, AST_NODE* actualParameter);
 void checkReturnStmt(AST_NODE* returnNode);
@@ -43,7 +46,7 @@ void free_reg(int);
 
 FILE* asm_out;
 int frame_size=0;
-int reg[26]={};
+int reg[150]={};
 int if_num = 0;
 int else_num = 0;
 int exit_num = 0;
@@ -55,22 +58,31 @@ int f_label=0;
 
 
 int getreg(){
-   int i=4;
+   int i;
    for(i=8;i<26;i++){
        if(reg[i]==0){
 	  reg[i] = 1;
           return i;
        }
    }
-
    return rand()%18+8; 
+}
 
+int getreg_f(){
+   int i;
+   for(i=101;i<132;i++){
+       if(reg[i]==0){
+	  reg[i] = 1;
+          return i;
+       }
+   }
+   return rand()%32+100; 
 }
 
 void free_reg(int i){
-   if(i>=26 || i<8){}
+   //if(i>=26 || i<8){}
 	 //printf("Try to free unavailable register: %d\n",i);
-   else reg[i] = 0;
+   reg[i] = 0;
 }
 
 
@@ -104,6 +116,8 @@ typedef enum ErrorMsgKind
 
 //CODE Generation
 void write_prolog(char* label){
+int i;
+    fprintf(asm_out,"j _begin_main\n");
     fprintf(asm_out,"%s:\n# prologue sequence\
 \n	sw	$ra, 0($sp)\
 \n	sw	$fp, -4($sp)\
@@ -133,12 +147,15 @@ void write_prolog(char* label){
 \n	sw	$23,80($sp)\
 \n	sw	$24,84($sp)\
 \n	sw	$25,88($sp)\
-     \n",label,label);
+\n",label,label);
 
+   for(i=0;i<32;i++){
+	fprintf(asm_out,"	s.s	$f%d, %d($sp)\n",i,i*4+92);
+   }
 }
 
-
 void write_epilog(char* label){
+int i;
     fprintf(asm_out,"# epilogue sequence\n\
 _end_%s:\n\
 	lw	$8,32($sp)\n\
@@ -162,7 +179,13 @@ _end_%s:\n\
 \n	lw	$4,48($sp)\
 \n	lw	$5,44($sp)\
 \n	lw	$6,40($sp)\
-\n	lw	$7,36($sp)\n\
+\n	lw	$7,36($sp)\n",label);
+
+for(i=0;i<32;i++){
+	fprintf(asm_out,"	l.s	$f%d, %d($sp)\n",i,i*4+92);
+}
+
+fprintf(asm_out,"\
 	lw	$ra, 4($fp)\n\
 	add	$sp, $fp, 4\n\
 	lw	$fp, 0($fp)\n\
@@ -171,7 +194,8 @@ _end_%s:\n\
 _framesize_of_%s: .word %d\n\
 .data\n\
 .text\n\
-     ",label,label,frame_size);
+",label,frame_size);
+
 }
 
 void printErrorMsgSpecial(AST_NODE* node1, char* name2, ErrorMsgKind errorMsgKind)
@@ -320,6 +344,9 @@ DATA_TYPE getBiggerType(DATA_TYPE dataType1, DATA_TYPE dataType2)
 void processProgramNode(AST_NODE *programNode)
 {
     AST_NODE *traverseDeclaration = programNode->child;
+	if(returnCurrentLv() == 0){
+	    fprintf(asm_out,"_global_label:\n");
+	}
     while(traverseDeclaration)
     {
         if(traverseDeclaration->nodeType == VARIABLE_DECL_LIST_NODE)
@@ -393,7 +420,6 @@ void processTypeNode(AST_NODE* idNodeAsType)
             idNodeAsType->dataType = symbolTableEntry->attribute->attr.typeDescriptor->properties.arrayProperties.elementType;
             break;
         }
-        //*/
     }
 }
 
@@ -427,7 +453,7 @@ void declareIdList(AST_NODE* declarationNode, SymbolAttributeKind isVariableOrTy
             {
             case NORMAL_ID:
                 attribute->attr.typeDescriptor = typeNode->semantic_value.identifierSemanticValue.symbolTableEntry->attribute->attr.typeDescriptor;
-		attribute->offset = frame_size-84;
+		attribute->offset = frame_size - (FRAME_BASE_SIZE-4);
 		frame_size+=4;
                 break;
             case ARRAY_ID:
@@ -441,7 +467,7 @@ void declareIdList(AST_NODE* declarationNode, SymbolAttributeKind isVariableOrTy
                     break;
                 }
                 attribute->attr.typeDescriptor = (TypeDescriptor*)malloc(sizeof(TypeDescriptor));
-		attribute->offset = frame_size-84;
+		attribute->offset = frame_size - (FRAME_BASE_SIZE-4);
                 processDeclDimList(traverseIDList, attribute->attr.typeDescriptor, ignoreArrayFirstDimSize);
                 if(traverseIDList->dataType == ERROR_TYPE)
                 {
@@ -491,7 +517,7 @@ void declareIdList(AST_NODE* declarationNode, SymbolAttributeKind isVariableOrTy
                 else
                 {
                     attribute->attr.typeDescriptor = typeNode->semantic_value.identifierSemanticValue.symbolTableEntry->attribute->attr.typeDescriptor;
-		    attribute->offset = frame_size-84;
+		    attribute->offset = frame_size-(FRAME_BASE_SIZE-4);
 		    frame_size += 4;
                 }
                 break;
@@ -515,7 +541,6 @@ void declareIdList(AST_NODE* declarationNode, SymbolAttributeKind isVariableOrTy
 		    fprintf(asm_out,".data\n");
 		    fprintf(asm_out,"_%s: .word 0\n",traverseIDList->semantic_value.identifierSemanticValue.identifierName);
 		    fprintf(asm_out,".text\n");
-		    fprintf(asm_out,"_global:\n");
 
 		}
 
@@ -525,17 +550,28 @@ void declareIdList(AST_NODE* declarationNode, SymbolAttributeKind isVariableOrTy
 		    
 		    if(r1 == -2){ //global variable
 			SymbolTableEntry *symbolTableEntry = retrieveSymbol(traverseIDList->semantic_value.identifierSemanticValue.identifierName);
-			fprintf(asm_out,"sw $%d, _%s\n",r2,symbolTableEntry->name);		
+			if(traverseIDList->dataType == INT_TYPE)
+				fprintf(asm_out,"sw $%d, _%s\n",r2,symbolTableEntry->name);
+			else
+				fprintf(asm_out,"s.s $f%d, _%s\n",r2%100,symbolTableEntry->name);					     
+		        free_reg(r2);	
 		    }
 		    else if(r1 != -1) //assume local variable
 		    {	
 			if(r2 == -2){ //global variable
 			    SymbolTableEntry *symbolTableEntry = retrieveSymbol(traverseIDList->child->semantic_value.identifierSemanticValue.identifierName);
-			    r2 = getreg();
-			    fprintf(asm_out,"lw $%d, _%s\n",r2,symbolTableEntry->name);		
+			    if(traverseIDList->child->dataType == INT_TYPE){
+			        r2 = getreg();
+				fprintf(asm_out,"lw $%d, _%s\n",r2,symbolTableEntry->name);
+				fprintf(asm_out,"sub $%d, $fp, $%d\n",r1,r1);	
+				fprintf(asm_out,"sw $%d, 0($%d)\n",r2,r1);
+			    }
+			    else{
+				r2 = getreg_f();
+				fprintf(asm_out,"l.s $f%d, _%s\n",r2%100,symbolTableEntry->name);					     
+				fprintf(asm_out,"sub $%d, $fp, $%d\n",r1,r1);	
+				fprintf(asm_out,"s.s $f%d, 0($%d)\n",r2%100,r1);
 			}	
-			fprintf(asm_out,"sub $%d, $fp, $%d\n",r1,r1);	
-			fprintf(asm_out,"sw $%d, 0($%d)\n",r2,r1);
 			free_reg(r1);
 			free_reg(r2);
 		    }
@@ -544,9 +580,6 @@ void declareIdList(AST_NODE* declarationNode, SymbolAttributeKind isVariableOrTy
             }
         }
         traverseIDList = traverseIDList->rightSibling;
-	if(returnCurrentLv() == 0){
-	    fprintf(asm_out,"j _begin_main\n");
-	}
     }
 }
 
@@ -560,10 +593,7 @@ int checkAssignOrExpr(AST_NODE* assignOrExprRelatedNode)
         }
         else if(assignOrExprRelatedNode->semantic_value.stmtSemanticValue.kind == FUNCTION_CALL_STMT)
         {
-            int i = getreg();
-            checkFunctionCall(assignOrExprRelatedNode);
-            fprintf(asm_out,"move $%d, $v0\n",i);
-	    return i;
+            return checkFunctionCall(assignOrExprRelatedNode);
         }
     }
     else
@@ -579,9 +609,15 @@ void checkWhileStmt(AST_NODE* whileNode)
     w_exit = ++while_exit_num;
     AST_NODE* boolExpression = whileNode->child;
     fprintf(asm_out,"_while%d:\n",w_num);	
-    int reg_return = checkAssignOrExpr(boolExpression);
-    free_reg(reg_return);
-    fprintf(asm_out,"beqz $%d, _while_exit%d\n",reg_return,w_exit);	
+    int reg_num = checkAssignOrExpr(boolExpression);
+    free_reg(reg_num);
+    if(reg_num > 100){
+    	fprintf(asm_out,"c.eq.s $f%d, 0.0\n",reg_num%100);		
+    	fprintf(asm_out,"bc1t _while_exit%d\n",w_exit);	
+    }
+    else{	
+    	fprintf(asm_out,"beqz $%d, _while_exit%d\n",reg_num,w_exit);	
+    }
     
     AST_NODE* bodyNode = boolExpression->rightSibling;
     processStmtNode(bodyNode);
@@ -610,20 +646,56 @@ int checkAssignmentStmt(AST_NODE* assignmentNode)
     int r1 = processVariableLValue(leftOp);
     int r2 = processExprRelatedNode(rightOp);
     
-    if(r1 == -2){ //global variable
-	SymbolTableEntry *symbolTableEntry = retrieveSymbol(leftOp->semantic_value.identifierSemanticValue.identifierName);
-	fprintf(asm_out,"sw $%d, _%s\n",r2,symbolTableEntry->name);		
+    //ASSUME: left and right operands always same type
+    if(leftOp->dataType != FLOAT_TYPE){ 
+    //LHS is INT
+	    if(r1 == -2){ //global variable
+		SymbolTableEntry *symbolTableEntry = retrieveSymbol(leftOp->semantic_value.identifierSemanticValue.identifierName);
+		if(r2 == -2){ //global variable
+		    SymbolTableEntry *symbolTableEntry = retrieveSymbol(rightOp->semantic_value.identifierSemanticValue.identifierName);
+		        r2 = getreg();
+		        fprintf(asm_out,"lw $%d, _%s\n",r2,symbolTableEntry->name);
+		        fprintf(asm_out,"sw $%d, _%s\n",r2,symbolTableEntry->name);
+		}	
+ 	  	else{
+		    fprintf(asm_out,"sw $%d, _%s\n",r2,symbolTableEntry->name);			       	      }
+	    }
+	    else if(r1 != -1) //assume local variable
+	    {	
+		if(r2 == -2){ //global variable
+		    SymbolTableEntry *symbolTableEntry = retrieveSymbol(rightOp->semantic_value.identifierSemanticValue.identifierName);
+		    r2 = getreg();
+		    fprintf(asm_out,"lw $%d, _%s\n",r2,symbolTableEntry->name);		
+		}	
+		fprintf(asm_out,"sub $%d, $fp, $%d\n",r1,r1);	
+		fprintf(asm_out,"sw $%d, 0($%d)\n",r2,r1);
+		free_reg(r1);
+	    }
     }
-    else if(r1 != -1) //assume local variable
-    {	
-	if(r2 == -2){ //global variable
-	    SymbolTableEntry *symbolTableEntry = retrieveSymbol(rightOp->semantic_value.identifierSemanticValue.identifierName);
-	    r2 = getreg();
-	    fprintf(asm_out,"lw $%d, _%s\n",r2,symbolTableEntry->name);		
-	}	
-	fprintf(asm_out,"sub $%d, $fp, $%d\n",r1,r1);	
-	fprintf(asm_out,"sw $%d, 0($%d)\n",r2,r1);
-	free_reg(r1);
+    else{
+    //LHS is FLOAT
+	    if(r1 == -2){ //global variable
+		SymbolTableEntry *symbolTableEntry = retrieveSymbol(leftOp->semantic_value.identifierSemanticValue.identifierName);
+		if(r2 == -2){ //global variable
+		    SymbolTableEntry *symbolTableEntry = retrieveSymbol(rightOp->semantic_value.identifierSemanticValue.identifierName);
+		    r2 = getreg_f();
+		    fprintf(asm_out,"l.s $f%d, _%s\n",r2%100,symbolTableEntry->name);
+		    fprintf(asm_out,"s.s $f%d, _%s\n",r2%100,symbolTableEntry->name);
+		}	
+		fprintf(asm_out,"s.s $f%d, _%s\n",r2%100,symbolTableEntry->name);	
+	    }
+	    else if(r1 != -1) //assume local variable
+	    {	
+		if(r2 == -2){ //global variable
+		    SymbolTableEntry *symbolTableEntry = retrieveSymbol(rightOp->semantic_value.identifierSemanticValue.identifierName);
+		    r2 = getreg_f();
+		    fprintf(asm_out,"l.s $f%d, _%s\n",r2%100,symbolTableEntry->name);
+		    //free_reg(r2);		
+		}	
+		fprintf(asm_out,"sub $%d, $fp, $%d\n",r1,r1);	
+		fprintf(asm_out,"s.s $f%d, 0($%d)\n",r2%100,r1);
+		free_reg(r1);
+	    }
     }
 
     if(leftOp->dataType == ERROR_TYPE || rightOp->dataType == ERROR_TYPE)
@@ -657,8 +729,14 @@ void checkIfStmt(AST_NODE* ifNode)
     fprintf(asm_out,"_if%d:\n",local_if);	
     AST_NODE* boolExpression = ifNode->child;
     int reg_num = checkAssignOrExpr(boolExpression);
-    free_reg(reg_num);	
-    fprintf(asm_out,"beqz $%d, _else%d\n",reg_num,local_else);	
+    free_reg(reg_num);
+    if(reg_num > 100){
+    	fprintf(asm_out,"c.eq.s $f%d, 0.0\n",reg_num%100);		
+    	fprintf(asm_out,"bc1t _else%d\n",local_else);	
+    }
+    else{	
+    	fprintf(asm_out,"beqz $%d, _else%d\n",reg_num,local_else);	
+    }
     AST_NODE* ifBodyNode = boolExpression->rightSibling;
     processStmtNode(ifBodyNode);
     fprintf(asm_out,"j _exit%d\n",local_exit);	
@@ -695,6 +773,7 @@ void checkWriteFunction(AST_NODE* functionCallNode)
  	 
 	if(actualParameter->nodeType == IDENTIFIER_NODE){
 	    int reg = processVariableRValue(actualParameter);
+	    free_reg(reg);
 	    if(reg == -2){//global variable
 		switch(retrieveSymbol(actualParameter->semantic_value.identifierSemanticValue.identifierName)->attribute->attr.typeDescriptor->properties.dataType){
 		    case INT_TYPE:
@@ -704,7 +783,7 @@ void checkWriteFunction(AST_NODE* functionCallNode)
 			break;
 		    case FLOAT_TYPE:
 			fprintf(asm_out,"li $v0, 2\n");
-			fprintf(asm_out,"lw $f12, _%s\n",actualParameter->semantic_value.identifierSemanticValue.identifierName);
+			fprintf(asm_out,"l.s $f12, _%s\n",actualParameter->semantic_value.identifierSemanticValue.identifierName);
 			fprintf(asm_out,"syscall\n");
 			break;
 		    default:
@@ -731,7 +810,6 @@ void checkWriteFunction(AST_NODE* functionCallNode)
 		
 	    }
 	}
-	
  	else if(actualParameter->nodeType == CONST_VALUE_NODE){
 		switch(actualParameter->dataType){
 		//assume write's parameter is constant
@@ -781,7 +859,7 @@ void checkReadFunction(AST_NODE* functionCallNode){
 }
 
 
-void checkFunctionCall(AST_NODE* functionCallNode)
+int checkFunctionCall(AST_NODE* functionCallNode)
 {
     AST_NODE* functionIDNode = functionCallNode->child;
     //special case
@@ -801,6 +879,15 @@ void checkFunctionCall(AST_NODE* functionCallNode)
 
     SymbolTableEntry* symbolTableEntry = retrieveSymbol(functionIDNode->semantic_value.identifierSemanticValue.identifierName);
     functionIDNode->semantic_value.identifierSemanticValue.symbolTableEntry = symbolTableEntry;
+   int reg_num;
+    if(symbolTableEntry->attribute->attr.functionSignature->returnType != FLOAT_TYPE){
+        reg_num = getreg();
+        fprintf(asm_out,"move $%d, $v0\n",reg_num);
+    }
+    else{
+        reg_num = getreg_f();
+        fprintf(asm_out,"mov.s $f%d, $f0\n",reg_num);
+    }
 
     if(symbolTableEntry == NULL)
     {
@@ -860,6 +947,8 @@ void checkFunctionCall(AST_NODE* functionCallNode)
     {
         functionCallNode->dataType = symbolTableEntry->attribute->attr.functionSignature->returnType;
     }
+
+return reg_num;
 }
 
 void checkParameterPassing(Parameter* formalParameter, AST_NODE* actualParameter)
@@ -901,10 +990,7 @@ int i;
         break;
     case STMT_NODE:
         //function call
-        i = getreg();
-        checkFunctionCall(exprRelatedNode);
-        fprintf(asm_out,"move $%d, $v0\n",i);
-	return i;
+        return checkFunctionCall(exprRelatedNode);
 	break;
     case IDENTIFIER_NODE:
         return processVariableRValue(exprRelatedNode);
@@ -1127,10 +1213,34 @@ int processExprNode(AST_NODE* exprNode)
         AST_NODE* rightOp = leftOp->rightSibling;
         int r1 = processExprRelatedNode(leftOp);
         int r2 = processExprRelatedNode(rightOp);
+	if(r1 == -2 ){
+	    if(leftOp->dataType != FLOAT_TYPE){
+	        r1 = getreg();
+	        fprintf(asm_out,"lw $%d, _%s\n",r1,leftOp->semantic_value.identifierSemanticValue.identifierName);
+            }
+	    else{
+	        r1 = getreg_f();
+	        fprintf(asm_out,"l.s $f%d, _%s\n",r1%100,leftOp->semantic_value.identifierSemanticValue.identifierName);
+	    }
+        }
+        if(r2 == -2 ){
+	    if(rightOp->dataType != FLOAT_TYPE){
+	        r2 = getreg();
+	        fprintf(asm_out,"lw $%d, _%s\n",r2,rightOp->semantic_value.identifierSemanticValue.identifierName);
+            }
+	    else{
+	        r2 = getreg_f();
+	        fprintf(asm_out,"l.s $f%d, _%s\n",r2%100,rightOp->semantic_value.identifierSemanticValue.identifierName);
+	    }
+	}
 	free_reg(r1);
 	free_reg(r2);
-	int reg_num = getreg();
+	int reg_num;
 	if((leftOp->dataType == FLOAT_TYPE) || (rightOp->dataType == FLOAT_TYPE)){
+	     int old_reg_num = getreg_f();
+	     r1 %= 100;
+	     r2 %= 100;
+	     reg_num = old_reg_num % 100;
 		switch(op){
 		    case BINARY_OP_ADD: 
 			 fprintf(asm_out,"add.s $f%d, $f%d, $f%d\n",reg_num,r1,r2);
@@ -1142,88 +1252,87 @@ int processExprNode(AST_NODE* exprNode)
 			 fprintf(asm_out,"mul.s $f%d, $f%d, $f%d\n",reg_num,r1,r2);
 			break;
 		    case BINARY_OP_DIV:
-			 fprintf(asm_out,"div.s $%d, $%d, $%d\n",reg_num,r1,r2);
+			 fprintf(asm_out,"div.s $f%d, $f%d, $f%d\n",reg_num,r1,r2);
 			break;
 		    case BINARY_OP_EQ:
-			 fprintf(asm_out,"c.eq.s $%d, $%d\n",r1,r2);
+			 fprintf(asm_out,"c.eq.s $f%d, $f%d\n",r1,r2);
 			 fprintf(asm_out,"bc1t _f_label%d\n",f_label);
 			break;
 		    case BINARY_OP_GE:
-			//FIXME
-			 fprintf(asm_out,"sge $%d, $%d, $%d\n",reg_num,r1,r2);
-			 fprintf(asm_out,"bc1t _f_label%d\n",f_label);
+			 fprintf(asm_out,"c.lt.s $f%d, $f%d\n",r1,r2);
+			 fprintf(asm_out,"bc1f _f_label%d\n",f_label);
 			break;
 		    case BINARY_OP_LE:
 			//TODO
-			 fprintf(asm_out,"c.le.s $%d, $%d, $%d\n",reg_num,r1,r2);
+			 fprintf(asm_out,"c.le.s $f%d, $f%d\n",r1,r2);
 			 fprintf(asm_out,"bc1t _f_label%d\n",f_label);
 			break;
 		    case BINARY_OP_NE:
-			 fprintf(asm_out,"sne $%d, $%d, $%d\n",reg_num,r1,r2);
-			 fprintf(asm_out,"bc1t _f_label%d\n",f_label);
+			 fprintf(asm_out,"c.eq.s $f%d, $f%d\n",r1,r2);
+			 fprintf(asm_out,"bc1f _f_label%d\n",f_label);
 			break;
 		    case BINARY_OP_GT:
-			 fprintf(asm_out,"sgt $%d, $%d, $%d\n",reg_num,r1,r2);
-			 fprintf(asm_out,"bc1t _f_label%d\n",f_label);
+			 fprintf(asm_out,"c.le.s $f%d, $f%d\n",r1,r2);
+			 fprintf(asm_out,"bc1f _f_label%d\n",f_label);
 			break;
 		    case BINARY_OP_LT:
-			 fprintf(asm_out,"slt $%d, $%d, $%d\n",reg_num,r1,r2);
+			 fprintf(asm_out,"c.lt.s $f%d, $f%d\n",r1,r2);
 			 fprintf(asm_out,"bc1t _f_label%d\n",f_label);
 			break;
 		    case BINARY_OP_AND:
+			 fprintf(asm_out,"easter egg: cant do AND in floating points");
+			break;
+		    case BINARY_OP_OR:
+			 fprintf(asm_out,"easter egg: cant do AND in floating points");
+			break;
+		}
+		fprintf(asm_out,"c.li.s $f%d,%d\n",reg_num,0);
+		fprintf(asm_out,"j _f_exit%d\n",f_exit);
+		fprintf(asm_out,"_f_label%d:\n",f_label++);
+		fprintf(asm_out,"c.li.s $f%d,%d\n",reg_num,1);
+		fprintf(asm_out,"_f_exit%d:\n",f_exit++);
+		reg_num = old_reg_num;
+	}
+	else{	//NOT a FLOAT
+		reg_num  = getreg();
+		switch(op){
+		    case BINARY_OP_ADD: 
+			 fprintf(asm_out,"add $%d, $%d, $%d\n",reg_num,r1,r2);
+			break;
+		    case BINARY_OP_SUB:
+			 fprintf(asm_out,"sub $%d, $%d, $%d\n",reg_num,r1,r2);
+			break;    
+		    case BINARY_OP_MUL:
+			 fprintf(asm_out,"mul $%d, $%d, $%d\n",reg_num,r1,r2);
+			break;
+		    case BINARY_OP_DIV:
+			 fprintf(asm_out,"div $%d, $%d, $%d\n",reg_num,r1,r2);
+			break;
+		    case BINARY_OP_EQ:
+			 fprintf(asm_out,"seq $%d, $%d, $%d\n",reg_num,r1,r2);
+			break;
+		    case BINARY_OP_GE:
+			 fprintf(asm_out,"sge $%d, $%d, $%d\n",reg_num,r1,r2);
+			break;
+		    case BINARY_OP_LE:
+			 fprintf(asm_out,"sle $%d, $%d, $%d\n",reg_num,r1,r2);
+			break;
+		    case BINARY_OP_NE:
+			 fprintf(asm_out,"sne $%d, $%d, $%d\n",reg_num,r1,r2);
+			break;
+		    case BINARY_OP_GT:
+			 fprintf(asm_out,"sgt $%d, $%d, $%d\n",reg_num,r1,r2);
+			break;
+		    case BINARY_OP_LT:
+			 fprintf(asm_out,"slt $%d, $%d, $%d\n",reg_num,r1,r2);
+			break;
+		    case BINARY_OP_AND:
 			 fprintf(asm_out,"and $%d, $%d, $%d\n",reg_num,r1,r2);
-			 fprintf(asm_out,"bc1t _f_label%d\n",f_label);
 			break;
 		    case BINARY_OP_OR:
 			 fprintf(asm_out,"or $%d, $%d, $%d\n",reg_num,r1,r2);
-			 fprintf(asm_out,"bc1t _f_label%d\n",f_label);
 			break;
 		}
-		fprintf(asm_out,"li $%d,%d\n",reg_num,0);
-		fprintf(asm_out,"j _f_exit%d\n",f_exit);
-		fprintf(asm_out,"_f_label%d:\n",f_label++);
-		fprintf(asm_out,"li $%d,%d\n",reg_num,1);
-		fprintf(asm_out,"_f_exit%d:\n",f_exit++);
-		
-	}	
-	switch(op){
-            case BINARY_OP_ADD: 
-		 fprintf(asm_out,"add $%d, $%d, $%d\n",reg_num,r1,r2);
-	    	break;
-	    case BINARY_OP_SUB:
-		 fprintf(asm_out,"sub $%d, $%d, $%d\n",reg_num,r1,r2);
-	    	break;    
-	    case BINARY_OP_MUL:
-		 fprintf(asm_out,"mul $%d, $%d, $%d\n",reg_num,r1,r2);
-	    	break;
-	    case BINARY_OP_DIV:
-		 fprintf(asm_out,"div $%d, $%d, $%d\n",reg_num,r1,r2);
-		break;
-	    case BINARY_OP_EQ:
-		//FIXME
-		 fprintf(asm_out,"seq $%d, $%d, $%d\n",reg_num,r1,r2);
-		break;
-	    case BINARY_OP_GE:
-		 fprintf(asm_out,"sge $%d, $%d, $%d\n",reg_num,r1,r2);
-		break;
-	    case BINARY_OP_LE:
-		 fprintf(asm_out,"sle $%d, $%d, $%d\n",reg_num,r1,r2);
-		break;
-	    case BINARY_OP_NE:
-		 fprintf(asm_out,"sne $%d, $%d, $%d\n",reg_num,r1,r2);
-		break;
-	    case BINARY_OP_GT:
-		 fprintf(asm_out,"sgt $%d, $%d, $%d\n",reg_num,r1,r2);
-		break;
-	    case BINARY_OP_LT:
-		 fprintf(asm_out,"slt $%d, $%d, $%d\n",reg_num,r1,r2);
-		break;
-	    case BINARY_OP_AND:
-		 fprintf(asm_out,"and $%d, $%d, $%d\n",reg_num,r1,r2);
-		break;
-	    case BINARY_OP_OR:
-		 fprintf(asm_out,"or $%d, $%d, $%d\n",reg_num,r1,r2);
-		break;
 	}
         //special case
         if(leftOp->dataType == INT_PTR_TYPE || leftOp->dataType == FLOAT_PTR_TYPE)
@@ -1269,18 +1378,35 @@ int processExprNode(AST_NODE* exprNode)
         AST_NODE* operand = exprNode->child;
         int r1 = processExprRelatedNode(operand);
 	free_reg(r1);
-	int reg_num = getreg();
-	switch(op){
-	    //FIXME
-            case UNARY_OP_POSITIVE:
-		 //fprintf(asm_out," $%d, $%d\n",reg_num,r1);
-		break;
-    	    case UNARY_OP_NEGATIVE:
-		 fprintf(asm_out,"mul $%d, $%d, -1\n",reg_num,r1);
-		break;
-    	    case UNARY_OP_LOGICAL_NEGATION:
-		 fprintf(asm_out,"not $%d, $%d\n",reg_num,r1);
-		break;
+	int reg_num;
+	if(r1 < 100){
+	        reg_num = getreg();
+		switch(op){
+		    case UNARY_OP_POSITIVE:
+			 //fprintf(asm_out," $%d, $%d\n",reg_num,r1);
+			break;
+		    case UNARY_OP_NEGATIVE:
+			 fprintf(asm_out,"mul $%d, $%d, -1\n",reg_num,r1);
+			break;
+		    case UNARY_OP_LOGICAL_NEGATION:
+			 fprintf(asm_out,"not $%d, $%d\n",reg_num,r1);
+			break;
+		}
+	}
+	else{
+	        reg_num = getreg_f();
+		switch(op){
+		    case UNARY_OP_POSITIVE:
+			//fprintf(asm_out," $%d, $%d\n",reg_num,r1);
+			break;
+		    case UNARY_OP_NEGATIVE:
+			 fprintf(asm_out,"mul.s $%d, $%d, -1\n",reg_num,r1);
+			break;
+		    case UNARY_OP_LOGICAL_NEGATION:
+			 fprintf(asm_out,"沒辦法not\n");
+			break;
+		}
+	     
 	}
         //special case
         if(operand->dataType == INT_PTR_TYPE || operand->dataType == FLOAT_PTR_TYPE)
@@ -1538,31 +1664,39 @@ int processVariableRValue(AST_NODE* idNode)
             }
         }
     }
+    int reg_num;
     fprintf(asm_out,"sub $%d, $fp, $%d\n",reg_offset,reg_offset);
-    fprintf(asm_out,"lw $%d, 0($%d)\n",reg_offset,reg_offset);
-    int reg_num = reg_offset;
-    //if(idNode->dataType == FLOAT_TYPE)
-    //	reg_num += 100;
+    if(idNode->dataType == FLOAT_TYPE){
+ 	reg_num = getreg_f();
+        fprintf(asm_out,"l.s $f%d, 0($%d)\n",reg_num%100,reg_offset);
+	free_reg(reg_offset);
+    }
+    else{
+         fprintf(asm_out,"lw $%d, 0($%d)\n",reg_offset,reg_offset);
+         reg_num = reg_offset;
+    }
  return reg_num;
 }
 
 
 int processConstValueNode(AST_NODE* constValueNode)
 {
-    int reg_num = getreg();
+    int reg_num;
     switch(constValueNode->semantic_value.const1->const_type)
     {
 	case INTEGERC:
+        reg_num = getreg();
         constValueNode->dataType = INT_TYPE;
         constValueNode->semantic_value.exprSemanticValue.constEvalValue.iValue =
             constValueNode->semantic_value.const1->const_u.intval;
         fprintf(asm_out,"li $%d, %d\n",reg_num,constValueNode->semantic_value.const1->const_u.intval);
 		break;
 	case FLOATC:
+	reg_num = getreg_f();
         constValueNode->dataType = FLOAT_TYPE;
         constValueNode->semantic_value.exprSemanticValue.constEvalValue.fValue =
             constValueNode->semantic_value.const1->const_u.fval;
-        fprintf(asm_out,"li.s $f%d, %f\n",reg_num,constValueNode->semantic_value.const1->const_u.fval);
+        fprintf(asm_out,"li.s $f%d, %f\n",reg_num%100,constValueNode->semantic_value.const1->const_u.fval);
 		break;
 	case STRINGC:
         constValueNode->dataType = CONST_STRING_TYPE;
@@ -1614,7 +1748,13 @@ void checkReturnStmt(AST_NODE* returnNode)
                 errorOccur = 1;
             }
         }
-	fprintf(asm_out,"move $v0, $%d\n",reg_return);
+        
+ 	if(reg_return >= 100){
+	    fprintf(asm_out,"mov.s $f0, $f%d\n",reg_return%100);
+        }
+	else{
+	    fprintf(asm_out,"move $v0, $%d\n",reg_return);
+	}
 	free_reg(reg_return);
     }
 
@@ -1674,7 +1814,7 @@ void processStmtNode(AST_NODE* stmtNode)
             checkIfStmt(stmtNode);
             break;
         case FUNCTION_CALL_STMT:
-            checkFunctionCall(stmtNode);
+            free_reg(checkFunctionCall(stmtNode));
             break;
         case RETURN_STMT:
             checkReturnStmt(stmtNode);
@@ -1831,7 +1971,8 @@ void declareFunction(AST_NODE* declarationNode)
     attribute->attr.functionSignature->returnType = returnTypeNode->dataType;
     attribute->attr.functionSignature->parameterList = NULL;
 
-    int enterFunctionNameToSymbolTable = 0;
+    
+int enterFunctionNameToSymbolTable = 0;
     if(!errorOccur)
     {
         enterSymbol(functionNameID->semantic_value.identifierSemanticValue.identifierName, attribute);
@@ -1905,9 +2046,11 @@ void declareFunction(AST_NODE* declarationNode)
     {
         //codegen
         write_prolog(functionNameID->semantic_value.identifierSemanticValue.identifierName);
-	fprintf(asm_out,"j _global\n");
-	fprintf(asm_out,"_begin_main:\n");
-	frame_size = 88;
+	if(strcmp(functionNameID->semantic_value.identifierSemanticValue.identifierName,"main") == 0){
+		fprintf(asm_out,"j _global_label\n");
+		fprintf(asm_out,"_begin_main:\n");
+	}
+	frame_size = FRAME_BASE_SIZE;
         AST_NODE *blockNode = parameterListNode->rightSibling;
         AST_NODE *traverseListNode = blockNode->child;
         while(traverseListNode)
@@ -1929,4 +2072,21 @@ void declareFunction(AST_NODE* declarationNode)
     }
 
     write_epilog(functionNameID->semantic_value.identifierSemanticValue.identifierName);
+
 }
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+

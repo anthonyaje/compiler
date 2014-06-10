@@ -1,9 +1,9 @@
+_global_label:
 .data
-_glo: .word 0
+_global: .word 0
 .text
-_global:
-li $8, 88
-sw $8, _glo
+li $8, 8
+sw $8, _global
 j _begin_main
 main:
 # prologue sequence
@@ -34,338 +34,303 @@ main:
 	sw	$22,76($sp)
 	sw	$23,80($sp)
 	sw	$24,84($sp)
-	sw	$25,88($sp)     
-j _global
+	sw	$25,88($sp)
+	s.s	$f0, 92($sp)
+	s.s	$f1, 96($sp)
+	s.s	$f2, 100($sp)
+	s.s	$f3, 104($sp)
+	s.s	$f4, 108($sp)
+	s.s	$f5, 112($sp)
+	s.s	$f6, 116($sp)
+	s.s	$f7, 120($sp)
+	s.s	$f8, 124($sp)
+	s.s	$f9, 128($sp)
+	s.s	$f10, 132($sp)
+	s.s	$f11, 136($sp)
+	s.s	$f12, 140($sp)
+	s.s	$f13, 144($sp)
+	s.s	$f14, 148($sp)
+	s.s	$f15, 152($sp)
+	s.s	$f16, 156($sp)
+	s.s	$f17, 160($sp)
+	s.s	$f18, 164($sp)
+	s.s	$f19, 168($sp)
+	s.s	$f20, 172($sp)
+	s.s	$f21, 176($sp)
+	s.s	$f22, 180($sp)
+	s.s	$f23, 184($sp)
+	s.s	$f24, 188($sp)
+	s.s	$f25, 192($sp)
+	s.s	$f26, 196($sp)
+	s.s	$f27, 200($sp)
+	s.s	$f28, 204($sp)
+	s.s	$f29, 208($sp)
+	s.s	$f30, 212($sp)
+	s.s	$f31, 216($sp)
+j _global_label
 _begin_main:
-li $9, 5
-li $9, 9
-li $9, 200
-li $10, 10
-sub $9, $fp, $9
-sw $10, 0($9)
-li $9, 12
-li $11, 2
-move $10, $11
-li $11, 3
-li $12, 9
-mul $10, $12, $10
-add $10, $11, $10
-li $11, 4
-mul $10, $11, $10
-add $9, $9, $10
-li $10, 3
-sub $9, $fp, $9
-sw $10, 0($9)
-li $9, 4
-li $10, 1
-sub $9, $fp, $9
-sw $10, 0($9)
-li $9, 8
-li $10, 0
-sub $9, $fp, $9
-sw $10, 0($9)
-_if1:
-li $9, 4
-sub $9, $fp, $9
-lw $9, 0($9)
-li $10, 8
-sub $10, $fp, $10
-lw $10, 0($10)
-sgt $9, $9, $10
-beqz $9, _else1
+
+
+
+li $8, 12
+sub $8, $fp, $8
+li.s $f9, 5.5
+s.s $f9,0($8)
+lw $8, 0($8)
+li $v0,1 
+move $a0, $8
+syscall
+
 .data
-_m1: .asciiz "correct\n"
+_m1: .asciiz "--------\n"
 .text
 li $v0, 4
 la $a0, _m1
 syscall
-j _exit1
-_else1:
+li $8, 28
+li $9, 12
+sub $9, $fp, $9
+lw $9, 0($9)
+sub $8, $fp, $8
+sw $9, 0($8)
+li $8, 4
+li.s $f9, 1.500000
+sub $8, $fp, $8
+sw $9, 0($8)
+li $8, 8
+li $9, 2
+sub $8, $fp, $8
+sw $9, 0($8)
+li $8, 12
+li $9, 3
+sub $8, $fp, $8
+sw $9, 0($8)
+li $8, 12
+li $9, 4
+sub $9, $fp, $9
+lw $9, 0($9)
+li $10, 8
+sub $10, $fp, $10
+lw $10, 0($10)
+mul $9, $9, $10
+li $10, 12
+sub $10, $fp, $10
+lw $10, 0($10)
+li $11, 4
+mul $10, $10, $11
+sub $9, $9, $10
+li $10, 5
+sub $9, $9, $10
+sub $8, $fp, $8
+sw $9, 0($8)
+li $8, 12
+sub $8, $fp, $8
+lw $8, 0($8)
+li $8, 12
+sub $8, $fp, $8
+lw $8, 0($8)
+li $v0, 1
+move $a0, $8
+syscall
 .data
-_m2: .asciiz "wrong\n"
+_m2: .asciiz "\n"
 .text
 li $v0, 4
 la $a0, _m2
 syscall
-_exit1:
-_if2:
-li $9, 4
-sub $9, $fp, $9
-lw $9, 0($9)
-li $10, 8
-sub $10, $fp, $10
-lw $10, 0($10)
-slt $9, $9, $10
-beqz $9, _else2
+li $8, 24
+li $9, 1
+mul $9, $9, -1
+sub $8, $fp, $8
+sw $9, 0($8)
+li $8, 24
+sub $8, $fp, $8
+lw $8, 0($8)
+li $8, 24
+sub $8, $fp, $8
+lw $8, 0($8)
+li $v0, 1
+move $a0, $8
+syscall
 .data
-_m3: .asciiz "wrong\n"
+_m3: .asciiz "\n"
 .text
 li $v0, 4
 la $a0, _m3
 syscall
-j _exit2
-_else2:
+li $8, 16
+li $9, 1
+sub $8, $fp, $8
+sw $9, 0($8)
+li $8, 20
+li $9, 2
+sub $8, $fp, $8
+sw $9, 0($8)
+li $8, 24
+li $9, 3
+sub $8, $fp, $8
+sw $9, 0($8)
+li $8, 24
+li $9, 16
+sub $9, $fp, $9
+lw $9, 0($9)
+li $10, 20
+sub $10, $fp, $10
+lw $10, 0($10)
+mul $9, $9, $10
+li $10, 24
+sub $10, $fp, $10
+lw $10, 0($10)
+li $11, 4
+mul $10, $10, $11
+sub $9, $9, $10
+li $10, 5
+sub $9, $9, $10
+sub $8, $fp, $8
+sw $9, 0($8)
+li $8, 24
+sub $8, $fp, $8
+lw $8, 0($8)
+li $8, 24
+sub $8, $fp, $8
+lw $8, 0($8)
+li $v0, 1
+move $a0, $8
+syscall
 .data
-_m4: .asciiz "correct\n"
+_m4: .asciiz "\n"
 .text
 li $v0, 4
 la $a0, _m4
 syscall
-_exit2:
-_if3:
-li $9, 4
-sub $9, $fp, $9
-lw $9, 0($9)
-li $10, 8
-sub $10, $fp, $10
-lw $10, 0($10)
-seq $9, $9, $10
-beqz $9, _else3
+li $8, 12
+li $9, 1
+li $10, 2
+sgt $9, $9, $10
+sub $8, $fp, $8
+sw $9, 0($8)
+li $8, 12
+sub $8, $fp, $8
+lw $8, 0($8)
+li $8, 12
+sub $8, $fp, $8
+lw $8, 0($8)
+li $v0, 1
+move $a0, $8
+syscall
 .data
-_m5: .asciiz "wrong\n"
+_m5: .asciiz "\n"
 .text
 li $v0, 4
 la $a0, _m5
 syscall
-j _exit3
-_else3:
+li $8, 12
+li $9, 2
+li $10, 2
+sge $9, $9, $10
+sub $8, $fp, $8
+sw $9, 0($8)
+li $8, 12
+sub $8, $fp, $8
+lw $8, 0($8)
+li $8, 12
+sub $8, $fp, $8
+lw $8, 0($8)
+li $v0, 1
+move $a0, $8
+syscall
 .data
-_m6: .asciiz "correct\n"
+_m6: .asciiz "\n"
 .text
 li $v0, 4
 la $a0, _m6
 syscall
-_exit3:
-_if4:
-li $9, 4
-sub $9, $fp, $9
-lw $9, 0($9)
-li $10, 8
-sub $10, $fp, $10
-lw $10, 0($10)
-sne $9, $9, $10
-beqz $9, _else4
+li $8, 12
+li $9, 1
+li $10, 2
+slt $9, $9, $10
+sub $8, $fp, $8
+sw $9, 0($8)
+li $8, 12
+sub $8, $fp, $8
+lw $8, 0($8)
+li $8, 12
+sub $8, $fp, $8
+lw $8, 0($8)
+li $v0, 1
+move $a0, $8
+syscall
 .data
-_m7: .asciiz "correct\n"
+_m7: .asciiz "\n"
 .text
 li $v0, 4
 la $a0, _m7
 syscall
-j _exit4
-_else4:
+li $8, 12
+li $9, 2
+li $10, 2
+sle $9, $9, $10
+sub $8, $fp, $8
+sw $9, 0($8)
+li $8, 12
+sub $8, $fp, $8
+lw $8, 0($8)
+li $8, 12
+sub $8, $fp, $8
+lw $8, 0($8)
+li $v0, 1
+move $a0, $8
+syscall
 .data
-_m8: .asciiz "wrong\n"
+_m8: .asciiz "\n"
 .text
 li $v0, 4
 la $a0, _m8
 syscall
-_exit4:
-li $9, 192
-li.s $f10, 1.000000
-sub $9, $fp, $9
-sw $10, 0($9)
-li $9, 196
-li.s $f10, 0.000000
-sub $9, $fp, $9
-sw $10, 0($9)
-_if5:
-li $9, 192
-sub $9, $fp, $9
-lw $9, 0($9)
-li $10, 196
-sub $10, $fp, $10
-lw $10, 0($10)
-sgt $9, $9, $10
-bc1t _f_label0
-li $9,0
-j _f_exit0
-_f_label0:
-li $9,1
-_f_exit0:
-sgt $9, $9, $10
-beqz $9, _else5
+li $8, 12
+li $9, 1
+li $10, 2
+sne $9, $9, $10
+sub $8, $fp, $8
+sw $9, 0($8)
+li $8, 12
+sub $8, $fp, $8
+lw $8, 0($8)
+li $8, 12
+sub $8, $fp, $8
+lw $8, 0($8)
+li $v0, 1
+move $a0, $8
+syscall
 .data
-_m9: .asciiz "correct\n"
+_m9: .asciiz "\n"
 .text
 li $v0, 4
 la $a0, _m9
 syscall
-j _exit5
-_else5:
+li $8, 12
+li $9, 1
+li $10, 2
+seq $9, $9, $10
+sub $8, $fp, $8
+sw $9, 0($8)
+li $8, 12
+sub $8, $fp, $8
+lw $8, 0($8)
+li $8, 12
+sub $8, $fp, $8
+lw $8, 0($8)
+li $v0, 1
+move $a0, $8
+syscall
 .data
-_m10: .asciiz "wrong\n"
+_m10: .asciiz "\n"
 .text
 li $v0, 4
 la $a0, _m10
 syscall
-_exit5:
-_if6:
-li $9, 192
-sub $9, $fp, $9
-lw $9, 0($9)
-li $10, 196
-sub $10, $fp, $10
-lw $10, 0($10)
-slt $9, $9, $10
-bc1t _f_label1
-li $9,0
-j _f_exit1
-_f_label1:
-li $9,1
-_f_exit1:
-slt $9, $9, $10
-beqz $9, _else6
-.data
-_m11: .asciiz "wrong\n"
-.text
-li $v0, 4
-la $a0, _m11
-syscall
-j _exit6
-_else6:
-.data
-_m12: .asciiz "correct\n"
-.text
-li $v0, 4
-la $a0, _m12
-syscall
-_exit6:
-_if7:
-li $9, 192
-sub $9, $fp, $9
-lw $9, 0($9)
-li $10, 196
-sub $10, $fp, $10
-lw $10, 0($10)
-sne $9, $9, $10
-bc1t _f_label2
-li $9,0
-j _f_exit2
-_f_label2:
-li $9,1
-_f_exit2:
-sne $9, $9, $10
-beqz $9, _else7
-.data
-_m13: .asciiz "correct\n"
-.text
-li $v0, 4
-la $a0, _m13
-syscall
-j _exit7
-_else7:
-.data
-_m14: .asciiz "wrong\n"
-.text
-li $v0, 4
-la $a0, _m14
-syscall
-_exit7:
-_if8:
-li $9, 4
-sub $9, $fp, $9
-lw $9, 0($9)
-li $10, 8
-sub $10, $fp, $10
-lw $10, 0($10)
-and $9, $9, $10
-beqz $9, _else8
-.data
-_m15: .asciiz "wrong\n"
-.text
-li $v0, 4
-la $a0, _m15
-syscall
-j _exit8
-_else8:
-_exit8:
-_if9:
-li $9, 4
-sub $9, $fp, $9
-lw $9, 0($9)
-li $10, 8
-sub $10, $fp, $10
-lw $10, 0($10)
-or $9, $9, $10
-beqz $9, _else9
-.data
-_m16: .asciiz "correct\n"
-.text
-li $v0, 4
-la $a0, _m16
-syscall
-j _exit9
-_else9:
-_exit9:
-li $9, 4
-li $10, 0
-sub $9, $fp, $9
-sw $10, 0($9)
-.data
-_m17: .asciiz "\n\nwhile\n\n"
-.text
-li $v0, 4
-la $a0, _m17
-syscall
-li $9, 200
-sub $9, $fp, $9
-lw $9, 0($9)
-li $9, 200
-sub $9, $fp, $9
-lw $9, 0($9)
-li $v0, 1
-move $a0, $9
-syscall
-_while1:
-li $10, 4
-sub $10, $fp, $10
-lw $10, 0($10)
-li $11, 10
-slt $10, $10, $11
-beqz $10, _while_exit1
-.data
-_m18: .asciiz "correct: "
-.text
-li $v0, 4
-la $a0, _m18
-syscall
-li $v0, 1
-lw $a0, _glo
-syscall
-.data
-_m19: .asciiz "\n"
-.text
-li $v0, 4
-la $a0, _m19
-syscall
-li $10, 4
-li $11, 4
-sub $11, $fp, $11
-lw $11, 0($11)
-li $12, 1
-add $11, $11, $12
-sub $10, $fp, $10
-sw $11, 0($10)
-j _while1
-_while_exit1:
-_if10:
-li $10, 4
-sub $10, $fp, $10
-lw $10, 0($10)
-li $11, 10
-seq $10, $10, $11
-beqz $10, _else10
-.data
-_m20: .asciiz "correct\n"
-.text
-li $v0, 4
-la $a0, _m20
-syscall
-j _exit10
-_else10:
-_exit10:
-li $10, 0
-move $v0, $10
+li $8, 0
+move $v0, $8
 j _end_main
 # epilogue sequence
 _end_main:
@@ -391,12 +356,43 @@ _end_main:
 	lw	$5,44($sp)
 	lw	$6,40($sp)
 	lw	$7,36($sp)
+	l.s	$f0, 92($sp)
+	l.s	$f1, 96($sp)
+	l.s	$f2, 100($sp)
+	l.s	$f3, 104($sp)
+	l.s	$f4, 108($sp)
+	l.s	$f5, 112($sp)
+	l.s	$f6, 116($sp)
+	l.s	$f7, 120($sp)
+	l.s	$f8, 124($sp)
+	l.s	$f9, 128($sp)
+	l.s	$f10, 132($sp)
+	l.s	$f11, 136($sp)
+	l.s	$f12, 140($sp)
+	l.s	$f13, 144($sp)
+	l.s	$f14, 148($sp)
+	l.s	$f15, 152($sp)
+	l.s	$f16, 156($sp)
+	l.s	$f17, 160($sp)
+	l.s	$f18, 164($sp)
+	l.s	$f19, 168($sp)
+	l.s	$f20, 172($sp)
+	l.s	$f21, 176($sp)
+	l.s	$f22, 180($sp)
+	l.s	$f23, 184($sp)
+	l.s	$f24, 188($sp)
+	l.s	$f25, 192($sp)
+	l.s	$f26, 196($sp)
+	l.s	$f27, 200($sp)
+	l.s	$f28, 204($sp)
+	l.s	$f29, 208($sp)
+	l.s	$f30, 212($sp)
+	l.s	$f31, 216($sp)
 	lw	$ra, 4($fp)
 	add	$sp, $fp, 4
 	lw	$fp, 0($fp)
 	jr	$ra
 .data 
-_framesize_of_main: .word 288
+_framesize_of_main: .word 244
 .data
 .text
-     

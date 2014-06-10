@@ -1,7 +1,7 @@
+int a = 3;
 int main() {
-    int a, b;
+    int b;
     float c, d;
-    a = 1;
     b = 0;
     if (a > b) {
         write("correct\n");
@@ -50,7 +50,6 @@ int main() {
         write("correct\n");
     }
 
-    a = 0;
     while (a<10) {
         write("correct: ");
         write(a);
