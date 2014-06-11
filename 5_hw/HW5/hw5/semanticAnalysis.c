@@ -36,6 +36,7 @@ int processVariableRValue(AST_NODE* idNode);
 int processConstValueNode(AST_NODE* constValueNode);
 void getExprOrConstValue(AST_NODE* exprOrConstNode, int* iValue, float* fValue);
 void evaluateExprValue(AST_NODE* exprNode);
+void checkFReadFunction(AST_NODE* functionCallNode);
 
 //code gen
 
@@ -578,6 +579,36 @@ void declareIdList(AST_NODE* declarationNode, SymbolAttributeKind isVariableOrTy
 			    }	
 			    free_reg(r1);
 			    free_reg(r2);
+			}else if(r2 > 100){//rhs is float
+		 	    if(traverseIDList->dataType == INT_TYPE){//lhs is int
+                        	int old_r2 = r2;
+				r2 = getreg();
+				free_reg(old_r2);
+				fprintf(asm_out,"cvt.w.s $f%d, $f%d\n",old_r2%100,old_r2%100);
+                         	fprintf(asm_out,"mfc1 $%d, $f%d\n",r2,old_r2%100);
+				fprintf(asm_out,"sub $%d, $fp, $%d\n",r1,r1);	
+                         	fprintf(asm_out,"sw $%d, 0($%d)\n",r2,r1);
+			    }else{//lhs is float
+				fprintf(asm_out,"sub $%d, $fp, $%d\n",r1,r1);	
+				fprintf(asm_out,"s.s $f%d, 0($%d)\n",r2%100,r1);
+			    }
+				free_reg(r1);
+				free_reg(r2);
+			}else{//rhs is int
+			    if(traverseIDList->dataType == INT_TYPE){//lhs is int
+				fprintf(asm_out,"sub $%d, $fp, $%d\n",r1,r1);	
+				fprintf(asm_out,"sw $%d, 0($%d)\n",r2,r1);
+			    }else{//lhs is float
+		                 int fl_r2 = getreg_f();
+                		 free_reg(r2);
+                    		 fprintf(asm_out,"sub $%d, $fp, $%d\n",r1,r1);
+                                 fprintf(asm_out,"mtc1 $%d, $f%d\n",r2,fl_r2%100);
+                                 fprintf(asm_out,"cvt.s.w $f%d, $f%d\n",fl_r2%100,fl_r2%100);
+                     	         fprintf(asm_out,"s.s $f%d, 0($%d)\n",fl_r2%100,r1);
+                                 r2=fl_r2;
+			    } 
+				free_reg(r1);
+				free_reg(r2);
 			}
 		    }
 		}
@@ -617,7 +648,10 @@ void checkWhileStmt(AST_NODE* whileNode)
     int reg_num = checkAssignOrExpr(boolExpression);
     free_reg(reg_num);
     if(reg_num > 100){
-    	fprintf(asm_out,"c.eq.s $f%d, 0.0\n",reg_num%100);		
+	int reg_zero = getreg_f();
+	free_reg(reg_zero);
+    	fprintf(asm_out,"li.s $f%d, 0.0\n",reg_zero%100);			
+    	fprintf(asm_out,"c.eq.s $f%d, $f%d\n",reg_num%100,reg_zero%100);		
     	fprintf(asm_out,"bc1t _while_exit%d\n",w_exit);	
     }
     else{	
@@ -845,7 +879,10 @@ void checkIfStmt(AST_NODE* ifNode)
     int reg_num = checkAssignOrExpr(boolExpression);
     free_reg(reg_num);
     if(reg_num > 100){
-    	fprintf(asm_out,"c.eq.s $f%d, 0.0\n",reg_num%100);		
+        int reg_zero = getreg_f();
+        free_reg(reg_zero);
+        fprintf(asm_out,"li.s $f%d, 0.0\n",reg_zero%100);  
+        fprintf(asm_out,"c.eq.s $f%d, $f%d\n",reg_num%100,reg_zero%100);
     	fprintf(asm_out,"bc1t _else%d\n",local_else);	
     }
     else{	
@@ -972,6 +1009,10 @@ void checkReadFunction(AST_NODE* functionCallNode){
     fprintf(asm_out,"syscall\n");	
 }
 
+void checkFReadFunction(AST_NODE* functionCallNode){
+    fprintf(asm_out,"li $v0, 6\n");
+    fprintf(asm_out,"syscall\n");
+}
 
 int checkFunctionCall(AST_NODE* functionCallNode)
 {
@@ -984,9 +1025,16 @@ int checkFunctionCall(AST_NODE* functionCallNode)
     }
     //special case: read
     if(strcmp(functionIDNode->semantic_value.identifierSemanticValue.identifierName, "read") == 0)
-    {
+    {   int read_reg = getreg();
         checkReadFunction(functionCallNode);
-        return;
+	fprintf(asm_out,"move $%d, $v0\n",read_reg);
+        return read_reg;
+    }
+    if(strcmp(functionIDNode->semantic_value.identifierSemanticValue.identifierName, "fread") == 0)
+    {   int read_reg = getreg_f();
+        checkFReadFunction(functionCallNode);
+        fprintf(asm_out,"mov.s $f%d, $f0\n",read_reg%100);
+        return read_reg;
     }
 
     fprintf(asm_out,"jal %s\n",functionIDNode->semantic_value.identifierSemanticValue.identifierName);
