@@ -551,7 +551,8 @@ void declareIdList(AST_NODE* declarationNode, SymbolAttributeKind isVariableOrTy
 		    
 		    if(r1 == -2){ //global variable
 			SymbolTableEntry *symbolTableEntry = retrieveSymbol(traverseIDList->semantic_value.identifierSemanticValue.identifierName);
-			if(traverseIDList->dataType == INT_TYPE)
+			DATA_TYPE lhs_dt = symbolTableEntry->attribute->attr.typeDescriptor->properties.dataType;
+			if(lhs_dt == INT_TYPE)
 				fprintf(asm_out,"sw $%d, _%s\n",r2,symbolTableEntry->name);
 			else
 				fprintf(asm_out,"s.s $f%d, _%s\n",r2%100,symbolTableEntry->name);					     
@@ -561,7 +562,9 @@ void declareIdList(AST_NODE* declarationNode, SymbolAttributeKind isVariableOrTy
 		    {	
 			if(r2 == -2){ //global variable
 			    SymbolTableEntry *symbolTableEntry = retrieveSymbol(traverseIDList->child->semantic_value.identifierSemanticValue.identifierName);
-			    if(traverseIDList->child->dataType == INT_TYPE){
+
+			DATA_TYPE rhs_dt = symbolTableEntry->attribute->attr.typeDescriptor->properties.dataType;
+			    if(rhs_dt == INT_TYPE){
 			        r2 = getreg();
 				fprintf(asm_out,"lw $%d, _%s\n",r2,symbolTableEntry->name);
 				fprintf(asm_out,"sub $%d, $fp, $%d\n",r1,r1);	
@@ -647,15 +650,35 @@ int checkAssignmentStmt(AST_NODE* assignmentNode)
     AST_NODE* rightOp = leftOp->rightSibling;
     int r1 = processVariableLValue(leftOp);
     int r2 = processExprRelatedNode(rightOp);
+
+    SymbolTableEntry *symbolTableEntry_l;
+    SymbolTableEntry *symbolTableEntry_r;
+   
+    DATA_TYPE rhs_dt = INT_TYPE;
+    DATA_TYPE lhs_dt = INT_TYPE;
+    //if(r1 > 100){
+    if(leftOp->dataType == FLOAT_TYPE){
+	lhs_dt = FLOAT_TYPE;
+    }
+    if(r1 == -2){
+        symbolTableEntry_l = retrieveSymbol(leftOp->semantic_value.identifierSemanticValue.identifierName);
+        lhs_dt = symbolTableEntry_l->attribute->attr.typeDescriptor->properties.dataType;
+    }
+    if(r2 > 100){
+	rhs_dt = FLOAT_TYPE;
+    }else if(r2 == -2){
+        symbolTableEntry_r = retrieveSymbol(rightOp->semantic_value.identifierSemanticValue.identifierName);
+        rhs_dt = symbolTableEntry_r->attribute->attr.typeDescriptor->properties.dataType;
+    }
     
-    //ASSUME: left and right operands always same type
-    if(leftOp->dataType != FLOAT_TYPE){ 
+ 
+    if(lhs_dt != FLOAT_TYPE){ 
+    //        fprintf(asm_out,"LHS is NOT float\n");
     //LHS is INT
 	    if(r1 == -2){ //global variable
-		SymbolTableEntry *symbolTableEntry_l = retrieveSymbol(leftOp->semantic_value.identifierSemanticValue.identifierName);
+		//SymbolTableEntry *symbolTableEntry_l = retrieveSymbol(leftOp->semantic_value.identifierSemanticValue.identifierName);
 		if(r2 == -2){ //global variable
-		    SymbolTableEntry *symbolTableEntry_r = retrieveSymbol(rightOp->semantic_value.identifierSemanticValue.identifierName);
-		    if(rightOp->dataType == INT_TYPE){
+		    if(rhs_dt == INT_TYPE){
                          r2 = getreg();
                          fprintf(asm_out,"lw $%d, _%s\n",r2,symbolTableEntry_r->name);
                          fprintf(asm_out,"sw $%d, _%s\n",r2,symbolTableEntry_l->name);
@@ -686,20 +709,17 @@ int checkAssignmentStmt(AST_NODE* assignmentNode)
 	    else if(r1 != -1) //assume local variable
 	    {	
 		if(r2 == -2){ //global variable
-		    SymbolTableEntry *symbolTableEntry = retrieveSymbol(rightOp->semantic_value.identifierSemanticValue.identifierName);
-		    //r2 = getreg();
-		    //fprintf(asm_out,"lw $%d, _%s\n",r2,symbolTableEntry->name);		
-		    if(rightOp->dataType == INT_TYPE){
+		    if(rhs_dt == INT_TYPE){
                          r2 = getreg();
                          fprintf(asm_out,"sub $%d, $fp, $%d\n",r1,r1);
-                         fprintf(asm_out,"lw $%d, _%s\n",r2,symbolTableEntry->name);
+                         fprintf(asm_out,"lw $%d, _%s\n",r2,symbolTableEntry_r->name);
                          fprintf(asm_out,"sw $%d, 0($%d)\n",r2,r1);
                     }
                     else{//RHS is NOT INT
                          int old_r2 = getreg_f();
                          r2 = getreg();
                          fprintf(asm_out,"sub $%d, $fp, $%d\n",r1,r1);
-                         fprintf(asm_out,"l.s $f%d, _%s\n",old_r2,symbolTableEntry->name);
+                         fprintf(asm_out,"l.s $f%d, _%s\n",old_r2,symbolTableEntry_r->name);
                          fprintf(asm_out,"cvt.w.s $f%d, $f%d\n",old_r2%100,old_r2%100);
                          fprintf(asm_out,"mfc1 $%d, $f%d\n",r2,old_r2%100);
                          fprintf(asm_out,"sw $%d, 0($%d)\n",r2,r1);
@@ -723,12 +743,11 @@ int checkAssignmentStmt(AST_NODE* assignmentNode)
 	    }
     }
     else{
+    //     fprintf(asm_out,"LHS is float\n");
     //LHS is FLOAT
 	    if(r1 == -2){ //global variable
-		SymbolTableEntry *symbolTableEntry_l = retrieveSymbol(leftOp->semantic_value.identifierSemanticValue.identifierName);
 		if(r2 == -2){ //global variable
-		    SymbolTableEntry *symbolTableEntry_r = retrieveSymbol(rightOp->semantic_value.identifierSemanticValue.identifierName);
-		    if(rightOp->dataType == FLOAT_TYPE){
+		    if(rhs_dt == FLOAT_TYPE){
 		         r2 = getreg_f();
 		         fprintf(asm_out,"l.s $f%d, _%s\n",r2%100,symbolTableEntry_r->name);
 		         fprintf(asm_out,"s.s $f%d, _%s\n",r2%100,symbolTableEntry_l->name);
@@ -752,19 +771,16 @@ int checkAssignmentStmt(AST_NODE* assignmentNode)
 		    r2=fl_r2;
       	        }
 		else{ //RHS is FLOAT
-		    fprintf(asm_out,"s.s $f%d, _%s\n",r2%,symbolTableEntry_l->name);		
+		    fprintf(asm_out,"s.s $f%d, _%s\n",r2%100,symbolTableEntry_l->name);		
 	        }
 	    }
 	    else if(r1 != -1) //LHS is FLOAT & local
 	    {	
 		if(r2 == -2){ //global variable
-		    SymbolTableEntry *symbolTableEntry = retrieveSymbol(rightOp->semantic_value.identifierSemanticValue.identifierName);
-		    //r2 = getreg_f();
-		    //fprintf(asm_out,"l.s $f%d, _%s\n",r2%100,symbolTableEntry->name);
-		    if(rightOp->dataType == FLOAT_TYPE){
+		    if(rhs_dt == FLOAT_TYPE){
                          r2 = getreg_f();
                          fprintf(asm_out,"sub $%d, $fp, $%d\n",r1,r1);
-                         fprintf(asm_out,"l.s $f%d, _%s\n",r2%100,symbolTableEntry->name);
+                         fprintf(asm_out,"l.s $f%d, _%s\n",r2%100,symbolTableEntry_r->name);
                          fprintf(asm_out,"s.s $f%d, 0($%d)\n",r2%100,r1);
                     }
                     else{//RHS is NOT FLOAT
@@ -772,24 +788,25 @@ int checkAssignmentStmt(AST_NODE* assignmentNode)
 			 free_reg(int_r2);
                          r2 = getreg_f();
                          fprintf(asm_out,"sub $%d, $fp, $%d\n",r1,r1);
-                         fprintf(asm_out,"lw $f%d, _%s\n",int_r2,symbolTableEntry->name);
+                         fprintf(asm_out,"lw $f%d, _%s\n",int_r2,symbolTableEntry_r->name);
 			 fprintf(asm_out,"mtc1 $%d, $f%d\n",int_r2,r2%100);
                          fprintf(asm_out,"cvt.s.w $f%d, $f%d\n",r2%100,r2%100);
-                         fprintf(asm_out,"s.s $%d, 0($%d)\n",r2%100,r1);
+                         fprintf(asm_out,"s.s $f%d, 0($%d)\n",r2%100,r1);
                     }
 		}
 		if(r2<100){ //RHS is INT && LHS is local FLOAT
+         	//fprintf(asm_out,"LHS is floati & r2<100\n");
 		    int fl_r2=getreg_f();
                     free_reg(r2);
 		    fprintf(asm_out,"sub $%d, $fp, $%d\n",r1,r1);
                     fprintf(asm_out,"mtc1 $%d, $f%d\n",r2,fl_r2%100);
                     fprintf(asm_out,"cvt.s.w $f%d, $f%d\n",fl_r2%100,fl_r2%100);
-                    fprintf(asm_out,"s.s $%d, 0($%d)\n",fl_r2%100,r1);
+                    fprintf(asm_out,"s.s $f%d, 0($%d)\n",fl_r2%100,r1);
 		    r2=fl_r2;
 		}
 		else{ //RHS is FLOAT && LHS is local FLOAT
 		    fprintf(asm_out,"sub $%d, $fp, $%d\n",r1,r1);
-                    fprintf(asm_out,"s.s $%d, 0($%d)\n",r2%100,r1);
+                    fprintf(asm_out,"s.s $f%d, 0($%d)\n",r2%100,r1);
 		}	
 		free_reg(r1);
 	    }
@@ -1330,6 +1347,20 @@ int processExprNode(AST_NODE* exprNode)
 	        fprintf(asm_out,"l.s $f%d, _%s\n",r2%100,rightOp->semantic_value.identifierSemanticValue.identifierName);
 	    }
 	}
+	if((leftOp->dataType == FLOAT_TYPE) && (rightOp->dataType == INT_TYPE)){
+		int fl_r2 = getreg_f();
+                free_reg(r2);//need to return float
+                fprintf(asm_out,"mtc1 $%d, $f%d\n",r2,fl_r2%100);
+                fprintf(asm_out,"cvt.s.w $f%d, $f%d\n",fl_r2%100,fl_r2%100);
+		r2 = fl_r2;
+	}
+	else if((leftOp->dataType == INT_TYPE) && (rightOp->dataType == FLOAT_TYPE)){
+		int fl_r1 = getreg_f();
+                free_reg(r1);//need to return float
+                fprintf(asm_out,"mtc1 $%d, $f%d\n",r1,fl_r1%100);
+                fprintf(asm_out,"cvt.s.w $f%d, $f%d\n",fl_r1%100,fl_r1%100);
+		r1 = fl_r1;
+	}
 	free_reg(r1);
 	free_reg(r2);
 	int reg_num;
@@ -1341,15 +1372,19 @@ int processExprNode(AST_NODE* exprNode)
 		switch(op){
 		    case BINARY_OP_ADD: 
 			 fprintf(asm_out,"add.s $f%d, $f%d, $f%d\n",reg_num,r1,r2);
+			 fprintf(asm_out,"j _f_exit%d\n",f_exit);
 			break;
 		    case BINARY_OP_SUB:
 			 fprintf(asm_out,"sub.s $f%d, $f%d, $f%d\n",reg_num,r1,r2);
+			 fprintf(asm_out,"j _f_exit%d\n",f_exit);
 			break;    
 		    case BINARY_OP_MUL:
 			 fprintf(asm_out,"mul.s $f%d, $f%d, $f%d\n",reg_num,r1,r2);
+			 fprintf(asm_out,"j _f_exit%d\n",f_exit);
 			break;
 		    case BINARY_OP_DIV:
 			 fprintf(asm_out,"div.s $f%d, $f%d, $f%d\n",reg_num,r1,r2);
+			 fprintf(asm_out,"j _f_exit%d\n",f_exit);
 			break;
 		    case BINARY_OP_EQ:
 			 fprintf(asm_out,"c.eq.s $f%d, $f%d\n",r1,r2);
@@ -1383,10 +1418,10 @@ int processExprNode(AST_NODE* exprNode)
 			 fprintf(asm_out,"easter egg: cant do AND in floating points");
 			break;
 		}
-		fprintf(asm_out,"li.s $f%d,%f\n",reg_num,0);
+		fprintf(asm_out,"li.s $f%d,%f\n",reg_num,0.0);
 		fprintf(asm_out,"j _f_exit%d\n",f_exit);
 		fprintf(asm_out,"_f_label%d:\n",f_label++);
-		fprintf(asm_out,"li.s $f%d,%f\n",reg_num,1);
+		fprintf(asm_out,"li.s $f%d,%f\n",reg_num,1.0);
 		fprintf(asm_out,"_f_exit%d:\n",f_exit++);
 		reg_num = old_reg_num;
 	}
@@ -1500,7 +1535,7 @@ int processExprNode(AST_NODE* exprNode)
 		    case UNARY_OP_NEGATIVE:
 			 ff = getreg_f();
 			 free_reg(ff);
-			 fprintf(asm_out,"li.s $f%d, %f\n",ff%100,-1);
+			 fprintf(asm_out,"li.s $f%d, %f\n",ff%100,-1.0);
 			 fprintf(asm_out,"mul.s $f%d, $f%d, $f%d\n",reg_num%100,r1%100,ff%100);
 			break;
 		    case UNARY_OP_LOGICAL_NEGATION:
@@ -2173,9 +2208,6 @@ void declareFunction(AST_NODE* declarationNode)
     }
 
     write_epilog(functionNameID->semantic_value.identifierSemanticValue.identifierName);
-    if(1){
-	  printf("hi there\n");
-	}
 }
 
 

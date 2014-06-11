@@ -1,7 +1,7 @@
 int global = 8;
 
 int main() {
-    int i, j, k;
+    float i, j, k;
     int m, n, l;
     float fl;
     k = (1 + 2) * 3 - 4/5 + -1;
@@ -12,8 +12,8 @@ int main() {
     i = 1.5;
     j = 2;
     k = 3;
-    k = i*j - k*4 - 5;
-    write(k);
+    global = i*j - k*4 - global*5;
+    write(global);
     write("\n");
 
     l =  -1;
@@ -52,7 +52,7 @@ int main() {
     write("\n");
 
 
- /*   k = 1.0 > 2.0;
+    k = 1.0 > 2.0;
     write(k);
     write("\n");
 
@@ -65,6 +65,6 @@ int main() {
     write(k);
     
     write("\n");
-*/
+
     return 0;
 }
